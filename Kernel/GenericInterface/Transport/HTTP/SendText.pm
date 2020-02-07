@@ -6,7 +6,7 @@
 # did not receive this file, see https://www.gnu.org/licenses/gpl-3.0.txt.
 # --
 
-package Kernel::GenericInterface::Transport::HTTP::REST;
+package Kernel::GenericInterface::Transport::HTTP::SendText;
 
 use strict;
 use warnings;
@@ -23,7 +23,7 @@ our $ObjectManagerDisabled = 1;
 
 =head1 NAME
 
-Kernel::GenericInterface::Transport::HTTP::REST - GenericInterface network transport interface for HTTP::REST
+Kernel::GenericInterface::Transport::HTTP::SendText - GenericInterface network transport interface for HTTP::REST, using text/plain format as response instead of json/application
 
 =head1 PUBLIC INTERFACE
 
@@ -218,9 +218,7 @@ sub ProviderProcessRequest {
     my $Length = $ENV{'CONTENT_LENGTH'};
 
     # No length provided, return the information we have.
-    # Also return for 'GET' method because it does not allow sending an entity-body in requests.
-    # For more information, see https://bugs.otrs.org/show_bug.cgi?id=14203.
-    if ( !$Length || $RequestMethod eq 'GET' ) {
+    if ( !$Length ) {
         return {
             Success   => 1,
             Operation => $Operation,
@@ -340,7 +338,7 @@ The HTTP code is set accordingly
     my $Result = $TransportObject->ProviderGenerateResponse(
         Success => 1
         Data    => { # data payload for response, optional
-            ...
+            Text => '...', 
         },
     );
 
@@ -385,22 +383,20 @@ sub ProviderGenerateResponse {
         $HTTPCode = 500;
     }
 
-    # Orepare data.
-    my $JSONString = $Kernel::OM->Get('Kernel::System::JSON')->Encode(
-        Data => $Param{Data},
-    );
+    # Prepare data.
+    my $String = $Param{Data}->{Text}; 
 
-    if ( !$JSONString ) {
+    if ( !$String ) {
         return $Self->_Output(
             HTTPCode => 500,
-            Content  => 'Error while encoding return JSON structure.',
+            Content  => 'Error while preparing text string',
         );
     }
 
     # No error - return output.
     return $Self->_Output(
         HTTPCode => $HTTPCode,
-        Content  => $JSONString,
+        Content  => $String,
     );
 }
 
@@ -902,13 +898,7 @@ sub _Output {
     # prepare data
     $Param{Content}  ||= '';
     $Param{HTTPCode} ||= 500;
-    my $ContentType;
-    if ( $Param{HTTPCode} eq 200 ) {
-        $ContentType = 'application/json';
-    }
-    else {
-        $ContentType = 'text/plain';
-    }
+    my $ContentType = 'text/plain';
 
     # Calculate content length (based on the bytes length not on the characters length).
     my $ContentLength = bytes::length( $Param{Content} );

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<otrs_config version="2.0" init="Changes">
+
+    <-- Web Service operation -->
+
+    <Setting Name="GenericInterface::Operation::Module###Prometheus::MetricGet" Required="0" Valid="1">
+        <Description Translatable="1">GenericInterface module registration for the operation layer.</Description>
+        <Navigation>GenericInterface::Operation::ModuleRegistration</Navigation>
+        <Value>
+            <Hash>
+                <Item Key="Name">MetricGet</Item>
+                <Item Key="Controller">Prometheus</Item>
+                <Item Key="ConfigDialog">AdminGenericInterfaceOperationDefault</Item>
+            </Hash>
+        </Value>
+    </Setting>
+
+    <-- Settings -->
+
+    <Setting Name="Prometheus::Settings" Required="0" Valid="1">
+        <Description Translatable="1">Intervals for updating or cleaning metrics</Description>
+        <Value>
+            <Hash>
+                <Item ValueType="String" Key="UpdateMetricsInterval">20</Item>
+                <Item ValueType="String" Key="CleanMemoryInterval">500</Item>
+                <Item ValueType="String" Key="SharedMemoryKey">1999</Item>
+            </Hash>
+        </Value>
+    </Setting>
+
+    <-- Cron Tasks -->
+
+    <Setting Name="Daemon::SchedulerCronTaskManager::Task###PrometheusUpdateMetrics" Required="0" Valid="1" ConfigLevel="100">
+        <Description Translatable="1">Update metrics from database and /proc/</Description>
+        <Navigation>Daemon::SchedulerCronTaskManager::Task</Navigation>
+        <Value>
+            <Hash>
+                <Item Key="TaskName">PrometheusUpdateMetrics</Item>
+                <Item Key="Schedule">* * * * *</Item>               <!-- each minute -->
+                <Item Key="Module">Kernel::System::Prometheus</Item>
+                <Item Key="Function">UpdateMetrics</Item>
+                <Item Key="MaximumParallelInstances">1</Item>
+                <Item Key="Params">
+                    <Array>
+                    </Array>
+                </Item>
+            </Hash>
+        </Value>
+    </Setting>
+
+</otrs_config>
