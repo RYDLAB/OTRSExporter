@@ -19,6 +19,7 @@ our @ObjectDependencies = (
     'Kernel::System::Log',
     'Kernel::System::Main',
     'Kernel::System::PostMaster',
+    'Kernel::System::Prometheus',
 );
 
 sub new {
@@ -534,6 +535,15 @@ sub _Fetch {
         ObjectLogType => 'Connection',
         Status        => 'Successful',
     );
+
+    if ( $FetchCounter > 0 ) {
+        $Kernel::OM->Get('Kernel::System::Prometheus')->Change(
+            Callback => sub {
+                my $Metrics = shift;
+                $Metrics->{OTRSIncomeMailTotal}->inc($FetchCounter);
+            },
+        );
+    }
 
     return if $MessagesWithError;
     return 1;

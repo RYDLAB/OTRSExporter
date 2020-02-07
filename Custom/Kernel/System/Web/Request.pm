@@ -24,6 +24,7 @@ our @ObjectDependencies = (
     'Kernel::System::Web::UploadCache',
     'Kernel::System::FormDraft',
     'Kernel::System::Main',
+    'Kernel::System::Prometheus',
 );
 
 =head1 NAME
@@ -62,6 +63,13 @@ before calling Kernel::System::Web::Request->new();
 
 sub new {
     my ( $Type, %Param ) = @_;
+
+    $Kernel::OM->Get('Kernel::System::Prometheus')->Change(
+        Callback => sub {
+            my $Metrics = shift;
+            $Metrics->{HTTPRequestsTotal}->inc($$);
+        },
+    );
 
     # allocate new hash for object
     my $Self = {};

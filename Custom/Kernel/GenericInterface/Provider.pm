@@ -25,6 +25,7 @@ our @ObjectDependencies = (
     'Kernel::System::Log',
     'Kernel::System::GenericInterface::Webservice',
     'Kernel::GenericInterface::ErrorHandling',
+    'Kernel::System::Prometheus',
 );
 
 =head1 NAME
@@ -43,6 +44,13 @@ Don't use the constructor directly, use the ObjectManager instead:
 
 sub new {
     my ( $Type, %Param ) = @_;
+
+    $Kernel::OM->Get('Kernel::System::Prometheus')->Change(
+        Callback => sub {
+            my $Metrics = shift;
+            $Metrics->{HTTPRequestsTotal}->inc($$);
+        },
+    );
 
     # Allocate new hash for object.
     my $Self = {};

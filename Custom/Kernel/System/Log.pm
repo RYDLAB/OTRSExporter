@@ -20,6 +20,7 @@ use Carp ();
 our @ObjectDependencies = (
     'Kernel::Config',
     'Kernel::System::Encode',
+    'Kernel::System::Prometheus',
 );
 
 =head1 NAME
@@ -262,6 +263,13 @@ sub Log {
 
         shmwrite( $Self->{IPCSHMKey}, $Data . $String, 0, $Self->{IPCSize} ) || die $!;
     }
+
+    $Kernel::OM->Get('Kernel::System::Prometheus')->Change(
+        Callback => sub {
+            my $Metrics = shift;
+            $Metrics->{OTRSLogsTotal}->inc($Priority);
+        },
+    );
 
     return 1;
 }

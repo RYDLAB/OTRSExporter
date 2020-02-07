@@ -31,6 +31,7 @@ our @ObjectDependencies = (
     'Kernel::System::DateTime',
     'Kernel::System::Web::Request',
     'Kernel::System::Valid',
+    'Kernel::System::Prometheus',
 );
 
 =head1 NAME
@@ -69,6 +70,9 @@ sub new {
 
     # performance log
     $Self->{PerformanceLogStart} = time();
+
+    # Detect time for request duration
+    $Kernel::OM->Get('Kernel::System::Prometheus')->StartCountdown;
 
     $Kernel::OM->ObjectParamAdd(
         'Kernel::System::Log' => {
@@ -1297,7 +1301,30 @@ sub Run {
         }
 
         # ->Run $Action with $FrontendObject
-        $LayoutObject->Print( Output => \$FrontendObject->Run() );
+        my $OutputResult = \$FrontendObject->Run;
+        $LayoutObject->Print( Output => $OutputResult );
+
+        # Get prometheus to record metrics ( response_size_bytes and request duration )
+        my $PrometheusObject = $Kernel::OM->Get('Kernel::System::Prometheus');
+        {
+            use bytes;
+
+            my $ElapsedTime = $PrometheusObject->GetCountdown;
+            my $Route = "Action=$Param{Action}&Subaction=$Param{Subaction}";
+            my $Method = $ENV{REQUEST_METHOD};
+
+            $PrometheusObject->Change(
+                Callback => sub {
+                    my $Metrics = shift;
+                    $Metrics->{HTTPResponseSizeBytes}->observe(
+                        $$, length ${$OutputResult},
+                    );
+                    $Metrics->{HTTPRequestDurationSeconds}->observe(
+                        $$, $Method, $Route, $ElapsedTime,
+                    );
+                }
+            )
+        }
 
         # log request time
         if ( $ConfigObject->Get('PerformanceLog') ) {

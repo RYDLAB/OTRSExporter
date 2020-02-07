@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<otrs_config version="2.0" init="Changes">
+    <Setting Name="GenericInterface::Transport::Module###HTTP::SendText" Required="0" Valid="1">
+        <Description Translatable="1">GenericInterface module registration for the transport layer.</Description>
+        <Navigation>GenericInterface::Transport::ModuleRegistration</Navigation>
+        <Value>
+            <Hash>
+                <Item Key="Name">SendText</Item>
+                <Item Key="Protocol">HTTP</Item>
+                <Item Key="ConfigDialog">AdminGenericInterfaceTransportHTTPREST</Item>
+            </Hash>
+        </Value>
+    </Setting>
+</otrs_config>

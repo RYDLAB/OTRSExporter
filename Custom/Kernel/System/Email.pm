@@ -28,6 +28,7 @@ our @ObjectDependencies = (
     'Kernel::System::Log',
     'Kernel::System::MailQueue',
     'Kernel::System::CommunicationLog',
+    'Kernel::System::Prometheus',
 );
 
 =head1 NAME
@@ -679,6 +680,14 @@ sub Send {
             $RealFrom,
             $Param{Subject},
             ),
+    );
+
+
+    $Kernel::OM->Get('Kernel::System::Prometheus')->Change(
+        Callback => sub {
+            my $Metrics = shift;
+            $Metrics->{OTRSOutgoingMailTotal}->inc;
+        },
     );
 
     return $SendSuccess->(
