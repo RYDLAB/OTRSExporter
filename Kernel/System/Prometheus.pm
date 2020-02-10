@@ -12,11 +12,11 @@ use strict;
 use warnings;
 
 use Net::Prometheus;
+use Net::Prometheus::ProcessCollector::linux;
 use Time::HiRes qw( gettimeofday tv_interval );
 use Kernel::System::VariableCheck qw( IsHashRefWithData );
 
 our @ObjectDependencies = (
-    'Kernel::System::Prometheus::ProcessInformer::Linux::Apache2',
     'Kernel::System::Prometheus::Guard',
     'Kernel::System::DB',
     'Kernel::Config',
@@ -36,6 +36,7 @@ sub new {
         'Kernel::System::Prometheus::Guard',
         ObjectParams => {
             SHAREDKEY   => $Self->{Settings}{SharedMemoryKey},
+            DestroyFlag => 0,
         }
     );
 
@@ -57,7 +58,7 @@ sub new {
 
         $Kernel::OM->Get('Kernel::System::Log')->Log(
             Priority => 'info',
-            Message  => 'Shared memory is clear. Creating new metrics...',
+            Message  => 'Shared memory is empty. Creating new metrics...',
         );
 
         $Self->_RegisterDefaultMetrics;
@@ -66,12 +67,6 @@ sub new {
 
     return $Self;
 }
-
-=head2 Change
-
-    Change prometheus data
-
-=cut
 
 sub Change {
     my ( $Self, %Param ) = @_;
@@ -102,11 +97,36 @@ sub Render {
     $Self->{PrometheusObject}->render;
 }
 
+sub NewProcessCollector {
+    my ( $Self, %Param ) = @_;
+
+    if (!$Param{Name}) {
+        $Kernel::OM->Get('Kernel::System::Log')->Log(
+            Priority => 'error',
+            Message  => 'Name for process collector should be defined',
+        );
+
+        return 0;
+    }
+
+    $Self->Change(
+        Callback => sub {
+            my $Metrics = shift;
+            $Metrics->{$Param{Name}} = Net::Prometheus::ProcessCollector->new(
+                pid    => $Param{PID},
+                labels => $Param{Labels},
+                prefix => $Param{Prefix},
+            );
+        }
+    );
+
+    return 1;
+}
+
 sub UpdateMetrics {
     my ( $Self, %Param ) = @_;
 
     my $DBObject = $Kernel::OM->Get('Kernel::System::DB');
-    my $ProcessInformerObject = $Kernel::OM->Get('Kernel::System::Prometheus::ProcessInformer::Linux::Apache2');
 
     # Update article total metric
     return if !$DBObject->Prepare(
@@ -144,57 +164,6 @@ sub UpdateMetrics {
             },
         );
     }
- 
-    # Update daemon process metrics
-    my $DaemonProcessStats = $ProcessInformerObject->GetDaemonProcessStats; 
-
-    if (IsHashRefWithData($DaemonProcessStats)) {
-        for my $PID ( keys %{$DaemonProcessStats} ) {
-            $Self->Change(
-                Callback => sub {
-                    my $Metrics = shift;
-                    $Metrics->{DaemonProcessResidentMemoryBytes}->set(
-                        $PID, $DaemonProcessStats->{$PID}{RSS},
-                    );
-                    $Metrics->{DaemonProcessCPUSecondsTotal}->set(
-                        $PID, $DaemonProcessStats->{$PID}{TotalTime},
-                    );
-                    $Metrics->{DaemonProcessCPUUserSecondsTotal}->set(
-                        $PID, $DaemonProcessStats->{$PID}{UTime},
-                    );
-                    $Metrics->{DaemonProcessCPUSystemSecondsTotal}->set(
-                        $PID, $DaemonProcessStats->{$PID}{STime},
-                    );
-                },
-            );
-        }
-    }
-
-    # Update http-server process metrics
-    my $HTTPProcessStats = $ProcessInformerObject->GetServerProcessStats;
-
-    if (IsHashRefWithData($HTTPProcessStats)) {
-        for my $PID ( keys %{$HTTPProcessStats} ) {
-            $Self->Change(
-                Callback => sub {
-                    my $Metrics = shift;
-
-                    $Metrics->{HTTPProcessResidentMemoryBytes}->set(
-                        $PID, $HTTPProcessStats->{$PID}{RSS},
-                    );
-                    $Metrics->{HTTPProcessCPUSecondsTotal}->set(
-                        $PID, $HTTPProcessStats->{$PID}{TotalTime},
-                    );
-                    $Metrics->{HTTPProcessCPUUserSecondsTotal}->set(
-                        $PID, $HTTPProcessStats->{$PID}{UTime},
-                    );
-                    $Metrics->{HTTPProcessCPUSystemSecondsTotal}->set(
-                        $PID, $HTTPProcessStats->{$PID}{STime},
-                    );
-                },
-            );   
-        }
-    }
 
     return 1;
 }
@@ -226,8 +195,6 @@ sub _RegisterDefaultMetrics {
 
     my $HTTPMetricGroup   = $Self->{PrometheusObject}->new_metricgroup(namespace => 'http');
     my $OTRSMetricGroup   = $Self->{PrometheusObject}->new_metricgroup(namespace => 'otrs');
-    my $SystemMetricGroup = $Self->{PrometheusObject}->new_metricgroup(namespace => 'sys');
-
 
     # Initialize HTTP metric group
     $Self->{Metrics}{HTTPRequestDurationSeconds} = $HTTPMetricGroup->new_histogram(
@@ -279,54 +246,6 @@ sub _RegisterDefaultMetrics {
         labels => [qw( queue status )],
     );
 
-
-    #Initialize system daemon metric group
-    $Self->{Metrics}{DaemonProcessResidentMemoryBytes} = $SystemMetricGroup->new_gauge(
-        name   => 'daemon_process_resident_memory_bytes',
-        help   => 'Resident memory in bytes for daemon processes',
-        labels => [qw(worker)],
-    );
-
-    $Self->{Metrics}{DaemonProcessCPUSecondsTotal} = $SystemMetricGroup->new_gauge(
-        name   => 'daemon_process_cpu_seconds_total',
-        help   => 'Total daemon user and system CPU time spent in seconds',
-        labels => [qw(worker)],
-    );
-
-    $Self->{Metrics}{DaemonProcessCPUUserSecondsTotal} = $SystemMetricGroup->new_gauge(
-        name   => 'daemon_process_cpu_user_seconds_total',
-        help   => 'Total daemon user CPU time spent in seconds',
-        labels => [qw(worker)],
-    );
-
-    $Self->{Metrics}{DaemonProcessCPUSystemSecondsTotal} = $SystemMetricGroup->new_gauge(
-        name   => 'daemon_process_cpu_system_seconds_total',
-        help   => 'Total daemon system CPU time spent in seconds',
-        labels => [qw(worker)],
-    );
-
-
-    #Initialize system http metric group
-    $Self->{Metrics}{HTTPProcessResidentMemoryBytes} = $SystemMetricGroup->new_gauge(
-        name   => 'http_process_resident_memory_bytes',
-        help   => 'Resident memory in bytes for http-server processes',
-        labels => [qw(worker)]
-    );
-    $Self->{Metrics}{HTTPProcessCPUSecondsTotal} = $SystemMetricGroup->new_gauge(
-        name   => 'http_process_cpu_seconds_total',
-        help   => 'Total http-server user and system CPU time spent in seconds',
-        labels => [qw(worker)],
-    );
-    $Self->{Metrics}{HTTPProcessCPUUserSecondsTotal} = $SystemMetricGroup->new_gauge(
-        name   => 'http_process_cpu_user_seconds_total',
-        help   => 'Total http-server user CPU time spent in seconds',
-        labels => [qw(worker)],
-    );
-    $Self->{Metrics}{HTTPProcessCPUSystemSecondsTotal} = $SystemMetricGroup->new_gauge(
-        name   => 'http_process_cpu_system_seconds_total',
-        help   => 'Total http-server system CPU time spent in seconds',
-        labels => [qw(worker)],
-    );
 
     return 1;
 }

@@ -249,7 +249,10 @@ sub Run {
         use bytes;
 
         my $ElapsedTime = $PrometheusObject->GetCountdown;
-        my $Route = "Action=$Param{Action}&Subaction=$Param{Subaction}";
+
+        my $Route = "Action=$Param{Action}";
+        $Route .= "Subaction=$Param{Subaction}" if $Param{Subaction};
+
         my $Method = $ENV{REQUEST_METHOD};
 
         $PrometheusObject->Change(
