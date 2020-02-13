@@ -23,6 +23,7 @@ our @ObjectDependencies = (
     'Kernel::System::Daemon::SchedulerDB',
     'Kernel::System::Log',
     'Kernel::System::Prometheus',
+    'Kernel::System::Prometheus::Helper',
 );
 
 =head1 NAME
@@ -81,18 +82,21 @@ sub new {
     $Self->{Debug}      = $Param{Debug};
     $Self->{DaemonName} = 'Daemon: SchedulerCronTaskManager';
 
+
+
+    my $Host = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost;
     $Kernel::OM->Get('Kernel::System::Prometheus')->NewProcessCollector(
         Name   => 'CronTaskProc',
         PID    => $$,
         Prefix => 'daemon_process',
-        Labels => [ worker => $$, name => 'CronTaskManager' ],
+        Labels => [ host => $Host, worker => $$, name => 'CronTaskManager' ],
     );
 
     $Kernel::OM->Get('Kernel::System::Prometheus')->NewProcessCollector(
         Name   => 'MainDaemon',
         PID    => getppid,
         Prefix => 'daemon_process',
-        Labels => [ worker => getppid, name => 'MainDaemon' ],
+        Labels => [ host => $Host, worker => getppid, name => 'MainDaemon' ],
     );
 
     return $Self;

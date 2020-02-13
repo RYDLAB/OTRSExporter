@@ -26,6 +26,7 @@ our @ObjectDependencies = (
     'Kernel::System::GenericInterface::Webservice',
     'Kernel::GenericInterface::ErrorHandling',
     'Kernel::System::Prometheus',
+    'Kernel::System::Prometheus::Helper',
 );
 
 =head1 NAME
@@ -45,10 +46,11 @@ Don't use the constructor directly, use the ObjectManager instead:
 sub new {
     my ( $Type, %Param ) = @_;
 
+    my $Host = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost;
     $Kernel::OM->Get('Kernel::System::Prometheus')->Change(
         Callback => sub {
             my $Metrics = shift;
-            $Metrics->{HTTPRequestsTotal}->inc($$);
+            $Metrics->{HTTPRequestsTotal}->inc( $Host, $$ );
         },
     );
 

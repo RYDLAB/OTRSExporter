@@ -29,6 +29,7 @@ our @ObjectDependencies = (
     'Kernel::System::MailQueue',
     'Kernel::System::CommunicationLog',
     'Kernel::System::Prometheus',
+    'Kernel::System::Prometheus::Helper',
 );
 
 =head1 NAME
@@ -683,10 +684,11 @@ sub Send {
     );
 
 
+    my $Host = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost;
     $Kernel::OM->Get('Kernel::System::Prometheus')->Change(
         Callback => sub {
             my $Metrics = shift;
-            $Metrics->{OTRSOutgoingMailTotal}->inc;
+            $Metrics->{OTRSOutgoingMailTotal}->inc($Host);
         },
     );
 

@@ -13,10 +13,11 @@ use warnings;
 
 use Net::Prometheus;
 use Net::Prometheus::ProcessCollector::linux;
-use Time::HiRes qw( gettimeofday tv_interval );
+
 use Kernel::System::VariableCheck qw( IsHashRefWithData );
 
 our @ObjectDependencies = (
+    'Kernel::System::Prometheus::Helper',
     'Kernel::System::Prometheus::Guard',
     'Kernel::System::DB',
     'Kernel::Config',
@@ -27,7 +28,7 @@ sub new {
 
     my $Self = {};
     bless( $Self, $Type );
-    
+
     $Self->{PrometheusObject} = Net::Prometheus->new( disable_process_collector => 1 );
 
     $Self->{Settings} = $Kernel::OM->Get('Kernel::Config')->Get('Prometheus::Settings');
@@ -70,23 +71,8 @@ sub new {
 
 sub Change {
     my ( $Self, %Param ) = @_;
-    
-    $Self->{Guard}->Change(Callback => $Param{Callback});
-}
 
-
-sub StartCountdown {
-    shift->{_TimeStart} = [gettimeofday];
-}
-
-sub GetCountdown {
-    my $Self = shift;
-
-    if ($Self->{_TimeStart}) {
-        return tv_interval($Self->{_TimeStart}); 
-    }
-
-    return 0;
+    $Self->{Guard}->Change( Callback => $Param{Callback} );
 }
 
 sub Render {
@@ -128,7 +114,9 @@ sub UpdateMetrics {
 
     my $DBObject = $Kernel::OM->Get('Kernel::System::DB');
 
-    # Update article total metric
+    # Get article total info
+    my @ArticleInfo;
+
     return if !$DBObject->Prepare(
         SQL => 'SELECT queue.name, ticket_state.name, COUNT(*) FROM article
                 JOIN ticket ON article.ticket_id = ticket.id
@@ -139,15 +127,12 @@ sub UpdateMetrics {
 
     while ( my @Row = $DBObject->FetchrowArray ) {
         my ( $Queue, $Status, $Num ) = @Row;
-        $Self->Change(
-            Callback => sub {
-                my $Metrics = shift;
-                $Metrics->{OTRSArticleTotal}->set( $Queue, $Status, $Num );
-            },
-        );
+        push @ArticleInfo, [ $Queue, $Status, $Num ];
     }
 
-    # Update ticket total metric
+    # Get ticket info
+    my @TicketInfo;
+
     return if !$DBObject->Prepare(
         SQL => 'SELECT queue.name, ticket_state.name, count(*) FROM ticket
                 JOIN queue ON queue.id = ticket.queue_id
@@ -157,13 +142,28 @@ sub UpdateMetrics {
 
     while ( my @Row = $DBObject->FetchrowArray ) {
         my ( $Queue, $Status, $Num ) = @Row;
-        $Self->Change(
-            Callback => sub {
-                my $Metrics = shift;
-                $Metrics->{OTRSTicketTotal}->set( $Queue, $Status, $Num );
-            },
-        );
+        push @TicketInfo, [ $Queue, $Status, $Num ];
     }
+
+
+    # Record info as metrics
+    my $Host = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost;
+
+    $Self->Change(
+        Callback => sub {
+            my $Metrics = shift;
+
+            for my $Row (@ArticleInfo) {
+                my ( $Queue, $Status, $Num ) = @$Row;
+                $Metrics->{OTRSArticleTotal}->set( $Host, $Queue, $Status, $Num );
+            }
+
+            for my $Row (@TicketInfo) {
+                my ( $Queue, $Status, $Num ) = @$Row;
+                $Metrics->{OTRSTicketTotal}->set( $Host, $Queue, $Status, $Num );
+            }
+        }
+    );
 
     return 1;
 }
@@ -178,7 +178,7 @@ sub _LoadSharedMetrics {
             Priority => 'error',
             Message  => 'Prometheus can not load metrics from shared memory. It\'s empty!',
         );
-        
+
         return;
     }
 
@@ -188,7 +188,6 @@ sub _LoadSharedMetrics {
 
     return 1;
 }
-
 
 sub _RegisterDefaultMetrics {
     my $Self = shift;
@@ -200,20 +199,20 @@ sub _RegisterDefaultMetrics {
     $Self->{Metrics}{HTTPRequestDurationSeconds} = $HTTPMetricGroup->new_histogram(
         name    => 'request_duration_seconds',
         help    => 'The duration of the request in seconds',
-        labels  => [qw( worker method route )],
+        labels  => [qw( host worker method route )],
     );
 
     $Self->{Metrics}{HTTPResponseSizeBytes} = $HTTPMetricGroup->new_histogram(
         name    => 'response_size_bytes',
         help    => 'The size of the response in bytes',
-        labels  => [qw(worker)],
+        labels  => [qw( host worker)],
         buckets => [ 50, 100, 500, 1000, 5000, 10000, 25000, 50000, 100000, 1000000 ],
     );
 
     $Self->{Metrics}{HTTPRequestsTotal} = $HTTPMetricGroup->new_counter(
         name   => 'requests_total',
         help   => 'The total number of the HTTP requests',
-        labels => [qw(worker)],
+        labels => [qw( host worker)],
     );
 
 
@@ -221,29 +220,31 @@ sub _RegisterDefaultMetrics {
     $Self->{Metrics}{OTRSIncomeMailTotal} = $OTRSMetricGroup->new_counter(
         name   => 'income_mail_total',
         help   => 'The number of incoming mail',
+        labels => [qw(host)],
     );
 
     $Self->{Metrics}{OTRSOutgoingMailTotal} = $OTRSMetricGroup->new_counter(
         name   => 'outgoing_mail_total',
         help   => 'The number of outgoing mail',
+        labels => [qw(host)],
     );
 
     $Self->{Metrics}{OTRSTicketTotal} = $OTRSMetricGroup->new_gauge(
         name   => 'ticket_total',
         help   => 'The number of tickets',
-        labels => [qw( queue status )],
+        labels => [qw( host queue status )],
     );
 
     $Self->{Metrics}{OTRSLogsTotal} = $OTRSMetricGroup->new_counter(
         name   => 'logs_total',
         help   => 'The number of the logs',
-        labels => [qw(priority)],
+        labels => [qw( host priority )],
     );
 
     $Self->{Metrics}{OTRSArticleTotal} = $OTRSMetricGroup->new_gauge(
         name   => 'article_total',
         help   => 'The number of the articles',
-        labels => [qw( queue status )],
+        labels => [qw( host queue status )],
     );
 
 

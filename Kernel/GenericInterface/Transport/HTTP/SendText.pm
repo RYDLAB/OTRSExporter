@@ -338,7 +338,7 @@ The HTTP code is set accordingly
     my $Result = $TransportObject->ProviderGenerateResponse(
         Success => 1
         Data    => { # data payload for response, optional
-            Text => '...', 
+            Text => '...',
         },
     );
 
@@ -384,7 +384,7 @@ sub ProviderGenerateResponse {
     }
 
     # Prepare data.
-    my $String = $Param{Data}->{Text}; 
+    my $String = $Param{Data}->{Text};
 
     if ( !$String ) {
         return $Self->_Output(

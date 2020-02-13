@@ -23,6 +23,7 @@ our @ObjectDependencies = (
     'Kernel::System::GenericAgent',
     'Kernel::System::Log',
     'Kernel::System::Prometheus',
+    'Kernel::System::Prometheus::Helper',
 );
 
 =head1 NAME
@@ -81,11 +82,12 @@ sub new {
     $Self->{Debug}      = $Param{Debug};
     $Self->{DaemonName} = 'Daemon: SchedulerGenericAgentTaskManager';
 
+    my $Host = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost;
     $Kernel::OM->Get('Kernel::System::Prometheus')->NewProcessCollector(
         Name   => 'GenericAgentTaskProc',
         PID    => $$,
         Prefix =>  'daemon_process',
-        Labels => [ worker => $$, name => 'GenericAgentTaskManager' ],
+        Labels => [ host => $Host, worker => $$, name => 'GenericAgentTaskManager' ],
     );
 
     return $Self;

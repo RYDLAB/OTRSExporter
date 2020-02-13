@@ -25,6 +25,7 @@ our @ObjectDependencies = (
     'Kernel::System::FormDraft',
     'Kernel::System::Main',
     'Kernel::System::Prometheus',
+    'Kernel::System::Prometheus::Helper',
 );
 
 =head1 NAME
@@ -64,10 +65,11 @@ before calling Kernel::System::Web::Request->new();
 sub new {
     my ( $Type, %Param ) = @_;
 
+    my $Host = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost;
     $Kernel::OM->Get('Kernel::System::Prometheus')->Change(
         Callback => sub {
             my $Metrics = shift;
-            $Metrics->{HTTPRequestsTotal}->inc($$);
+            $Metrics->{HTTPRequestsTotal}->inc( $Host, $$ );
         },
     );
 

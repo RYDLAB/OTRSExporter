@@ -27,6 +27,7 @@ our @ObjectDependencies = (
     'Kernel::System::Main',
     'Kernel::System::Storable',
     'Kernel::System::Prometheus',
+    'Kernel::System::Prometheus::Helper',
 );
 
 =head1 NAME
@@ -100,11 +101,12 @@ sub new {
     $Self->{Debug}      = $Param{Debug};
     $Self->{DaemonName} = 'Daemon: SchedulerTaskWorker';
 
+    my $Host = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost;
     $Kernel::OM->Get('Kernel::System::Prometheus')->NewProcessCollector(
         Name   => 'TaskWorkerProc',
         PID    => $$,
         Prefix => 'daemon_process',
-        Labels => [ worker => $$, name => 'TaskWorker' ],
+        Labels => [ host => $Host, worker => $$, name => 'TaskWorker' ],
     );
 
     return $Self;

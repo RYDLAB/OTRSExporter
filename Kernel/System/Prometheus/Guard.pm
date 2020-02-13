@@ -49,7 +49,7 @@ sub Change {
     $Self->LockMemory;
 
     my $Data = $Self->Fetch;
-    
+
     if (!$Data) {
         $Kernel::OM->Get('Kernel::System::Log')->Log(
             Priority => 'error',
@@ -61,7 +61,7 @@ sub Change {
     }
 
     $Param{Callback}->($Data);
- 
+
     $Self->Store(Data => $Data);
 
     $Self->UnlockMemory;

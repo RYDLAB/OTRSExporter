@@ -30,6 +30,7 @@ our @ObjectDependencies = (
     'Kernel::System::Web::Request',
     'Kernel::System::Valid',
     'Kernel::System::Prometheus',
+    'Kernel::System::Prometheus::Helper',
 );
 
 =head1 NAME
@@ -68,7 +69,7 @@ sub new {
     $Self->{PerformanceLogStart} = time();
 
     # Detect time for request duration
-    $Kernel::OM->Get('Kernel::System::Prometheus')->StartCountdown;
+    $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->StartCountdown;
 
     # get debug level
     $Self->{Debug} = $Param{Debug} || 0;
@@ -1127,9 +1128,10 @@ sub Run {
         {
             use bytes;
 
-            my $ElapsedTime = $PrometheusObject->GetCountdown;
+            my $Host = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost;
+            my $ElapsedTime = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetCountdown;
 
-            my $Route = "Action=$Param{Action}";
+            my $Route = "Action=$Param{Action};";
             $Route .= "Subaction=$Param{Subaction}" if $Param{Subaction};
 
             my $Method = $ENV{REQUEST_METHOD};
@@ -1138,10 +1140,10 @@ sub Run {
                 Callback => sub {
                     my $Metrics = shift;
                     $Metrics->{HTTPResponseSizeBytes}->observe(
-                        $$, length ${$OutputResult},
+                        $Host, $$, length ${$OutputResult},
                     );
                     $Metrics->{HTTPRequestDurationSeconds}->observe(
-                        $$, $Method, $Route, $ElapsedTime,
+                        $Host, $$, $Method, $Route, $ElapsedTime,
                     );
                 }
             )

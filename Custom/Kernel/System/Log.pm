@@ -21,6 +21,7 @@ our @ObjectDependencies = (
     'Kernel::Config',
     'Kernel::System::Encode',
     'Kernel::System::Prometheus',
+    'Kernel::System::Prometheus::Helper',
 );
 
 =head1 NAME
@@ -264,10 +265,11 @@ sub Log {
         shmwrite( $Self->{IPCSHMKey}, $Data . $String, 0, $Self->{IPCSize} ) || die $!;
     }
 
+    my $Host = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost;
     $Kernel::OM->Get('Kernel::System::Prometheus')->Change(
         Callback => sub {
             my $Metrics = shift;
-            $Metrics->{OTRSLogsTotal}->inc($Priority);
+            $Metrics->{OTRSLogsTotal}->inc( $Host, $Priority );
         },
     );
 

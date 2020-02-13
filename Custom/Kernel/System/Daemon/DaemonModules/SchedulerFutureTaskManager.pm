@@ -21,6 +21,7 @@ our @ObjectDependencies = (
     'Kernel::System::Cache',
     'Kernel::System::Log',
     'Kernel::System::Prometheus',
+    'Kernel::System::Prometheus::Helper',
 );
 
 =head1 NAME
@@ -80,11 +81,13 @@ sub new {
     $Self->{Debug}      = $Param{Debug};
     $Self->{DaemonName} = 'Daemon: SchedulerFutureTaskManager';
 
+
+    my $Host = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost;
     $Kernel::OM->Get('Kernel::System::Prometheus')->NewProcessCollector(
         Name   => 'FutureTaskProc',
         PID    => $$,
         Prefix => 'daemon_process',
-        Labels => [ worker => $$, name => 'FutureTaskManager'],
+        Labels => [ host => $Host, worker => $$, name => 'FutureTaskManager'],
     );
 
     return $Self;
