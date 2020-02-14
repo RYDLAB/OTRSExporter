@@ -86,14 +86,12 @@ sub new {
 
     my $Host = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost;
     $Kernel::OM->Get('Kernel::System::Prometheus')->NewProcessCollector(
-        Name   => 'CronTaskProc',
         PID    => $$,
         Prefix => 'daemon_process',
         Labels => [ host => $Host, worker => $$, name => 'CronTaskManager' ],
     );
 
     $Kernel::OM->Get('Kernel::System::Prometheus')->NewProcessCollector(
-        Name   => 'MainDaemon',
         PID    => getppid,
         Prefix => 'daemon_process',
         Labels => [ host => $Host, worker => getppid, name => 'MainDaemon' ],

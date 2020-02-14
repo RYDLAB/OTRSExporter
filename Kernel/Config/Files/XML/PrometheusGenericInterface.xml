@@ -24,6 +24,7 @@
                 <Item ValueType="String" Key="UpdateMetricsInterval">20</Item>
                 <Item ValueType="String" Key="CleanMemoryInterval">500</Item>
                 <Item ValueType="String" Key="SharedMemoryKey">1999</Item>
+                <Item ValueType="String" Key="ServerCMND">/usr/sbin/apache2 -k start</Item>
             </Hash>
         </Value>
     </Setting>
@@ -36,7 +37,7 @@
         <Value>
             <Hash>
                 <Item Key="TaskName">PrometheusUpdateMetrics</Item>
-                <Item Key="Schedule">* * * * *</Item>               <!-- each minute -->
+                <Item Key="Schedule">* * * * *</Item><!-- each minute -->
                 <Item Key="Module">Kernel::System::Prometheus</Item>
                 <Item Key="Function">UpdateMetrics</Item>
                 <Item Key="MaximumParallelInstances">1</Item>

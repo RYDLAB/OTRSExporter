@@ -15,6 +15,7 @@ use Net::Prometheus;
 use Net::Prometheus::ProcessCollector::linux;
 
 use Kernel::System::VariableCheck qw( IsHashRefWithData );
+use Proc::Find qw(find_proc);
 
 our @ObjectDependencies = (
     'Kernel::System::Prometheus::Helper',
@@ -63,7 +64,7 @@ sub new {
         );
 
         $Self->_RegisterDefaultMetrics;
-        $Self->{Guard}->Store(Data => $Self->{Metrics});
+        $Self->{Guard}->Store( Data => $Self->{Metrics} );
     }
 
     return $Self;
@@ -86,19 +87,17 @@ sub Render {
 sub NewProcessCollector {
     my ( $Self, %Param ) = @_;
 
-    if (!$Param{Name}) {
+    if ( !$Param{PID} ) {
         $Kernel::OM->Get('Kernel::System::Log')->Log(
             Priority => 'error',
-            Message  => 'Name for process collector should be defined',
+            Message  => 'Didn\'t get PID to collect',
         );
-
-        return 0;
     }
 
     $Self->Change(
         Callback => sub {
             my $Metrics = shift;
-            $Metrics->{$Param{Name}} = Net::Prometheus::ProcessCollector->new(
+            $Metrics->{"ProcCollector$Param{PID}"} = Net::Prometheus::ProcessCollector->new(
                 pid    => $Param{PID},
                 labels => $Param{Labels},
                 prefix => $Param{Prefix},
@@ -145,6 +144,9 @@ sub UpdateMetrics {
         push @TicketInfo, [ $Queue, $Status, $Num ];
     }
 
+    # Get http processes pids
+    my $ServerCMND = $Self->{Settings}{ServerCMND};
+    my $ServerPids = find_proc( cmndline => $ServerCMND );
 
     # Record info as metrics
     my $Host = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost;
@@ -152,6 +154,14 @@ sub UpdateMetrics {
     $Self->Change(
         Callback => sub {
             my $Metrics = shift;
+
+            for my $PID (@$ServerPids) {
+                $Metrics->{"ProcessCollector$PID"} = Net::Prometheus::ProcessCollector->new(
+                    pid    => $PID,
+                    labels => [ host => $Host, worker => $PID ],
+                    prefix => 'http_process',
+                );
+            }
 
             for my $Row (@ArticleInfo) {
                 my ( $Queue, $Status, $Num ) = @$Row;
@@ -164,6 +174,7 @@ sub UpdateMetrics {
             }
         }
     );
+
 
     return 1;
 }
@@ -246,7 +257,6 @@ sub _RegisterDefaultMetrics {
         help   => 'The number of the articles',
         labels => [qw( host queue status )],
     );
-
 
     return 1;
 }

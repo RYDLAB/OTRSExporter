@@ -88,7 +88,6 @@ sub new {
 
     my $Host = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost;
     $Kernel::OM->Get('Kernel::System::Prometheus')->NewProcessCollector(
-        Name   => 'SysConfigSyncProc',
         PID    => $$,
         Prefix => 'daemon_process',
         Labels => [ host => $Host, worker => $$, name => 'SystemConfigurationSyncManager' ],
