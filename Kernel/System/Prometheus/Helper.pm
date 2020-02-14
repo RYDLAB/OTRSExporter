@@ -1,10 +1,10 @@
-# --
-# Copyright (C) 2001-2020 OTRS AG, https://otrs.com/
-# --
-# This software comes with ABSOLUTELY NO WARRANTY. For details, see
-# the enclosed file COPYING for license information (GPL). If you
-# did not receive this file, see https://www.gnu.org/licenses/gpl-3.0.txt.
-# --
+#--
+#Copyright (C) 2001-2020 OTRS AG, https://otrs.com/
+#--
+#This software comes with ABSOLUTELY NO WARRANTY. For details, see
+#the enclosed file COPYING for license information (GPL). If you
+#did not receive this file, see https://www.gnu.org/licenses/gpl-3.0.txt.
+#--
 
 package Kernel::System::Prometheus::Helper;
 
@@ -17,32 +17,45 @@ use Sys::Hostname;
 our @ObjectDependencies = ();
 
 sub new {
-    my ( $Type, %Param ) = @_;
+   my ( $Type, %Param ) = @_;
 
-    my $Self = {};
-    bless( $Self, $Type );
+   my $Self = {};
+   bless( $Self, $Type );
 
-    $Self->{Host} = hostname;
+   $Self->{Host} = hostname;
+   $Self->{Temp} = {};
 
-    return $Self;
+   return $Self;
+}
+
+sub GetTempValue {
+   my ( $Self, %Param ) = @_;
+
+   return \$Self->{Temp}->{ $Param{ValueName} };
+}
+
+sub CreateTempValue {
+   my ( $Self, %Param ) = @_;
+
+   $Self->{Temp}->{ $Param{ValueName} } = $Param{Value};
 }
 
 sub GetHost {
-    return shift->{Host};
+   return shift->{Host};
 }
 
 sub StartCountdown {
-    shift->{TimeStart} = [gettimeofday];
+   shift->{TimeStart} = [gettimeofday];
 }
 
 sub GetCountdown {
-    my $Self = shift;
+   my $Self = shift;
 
-    if ($Self->{TimeStart}) {
-        return tv_interval($Self->{TimeStart});
-    }
+   if ($Self->{TimeStart}) {
+       return tv_interval($Self->{TimeStart});
+   }
 
-    return 0;
+   return 0;
 }
 
 1

@@ -205,6 +205,7 @@ sub _RegisterDefaultMetrics {
 
     my $HTTPMetricGroup   = $Self->{PrometheusObject}->new_metricgroup(namespace => 'http');
     my $OTRSMetricGroup   = $Self->{PrometheusObject}->new_metricgroup(namespace => 'otrs');
+    my $CacheMetricGroup  = $Self->{PrometheusObject}->new_metricgroup(namespace => 'cache');
 
     # Initialize HTTP metric group
     $Self->{Metrics}{HTTPRequestDurationSeconds} = $HTTPMetricGroup->new_histogram(
@@ -256,6 +257,14 @@ sub _RegisterDefaultMetrics {
         name   => 'article_total',
         help   => 'The number of the articles',
         labels => [qw( host queue status )],
+    );
+
+    # Initialize Cache metric group
+    $Self->{Metrics}{CacheOperations} = $CacheMetricGroup->new_counter(
+        namespace => 'cache',
+        name      => 'operations',
+        help      => 'Number of calls methods to manipulate cache',
+        labels    => [qw( host operation )],
     );
 
     return 1;
