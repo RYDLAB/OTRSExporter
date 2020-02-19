@@ -116,7 +116,7 @@ Don't use the constructor directly, use the ObjectManager instead:
 sub new {
     my ( $Type, %Param ) = @_;
 
-    for my $CounterName (qw( Set Get Delete )) {
+    for my $CounterName (qw( Set Get GetSuccess Delete )) {
         $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->CreateTempValue(
             Value     => 0,
             ValueName => $CounterName,
@@ -308,6 +308,7 @@ sub Get {
     # check in-memory cache
     if ( $Self->{CacheInMemory} && ( $Param{CacheInMemory} // 1 ) ) {
         if ( exists $Self->{Cache}->{ $Param{Type} }->{ $Param{Key} } ) {
+            ${ $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetTempValue( ValueName => 'GetSuccess' ) }++;
             return $Self->{Cache}->{ $Param{Type} }->{ $Param{Key} };
         }
     }
@@ -319,6 +320,7 @@ sub Get {
 
     # set in-memory cache
     if ( defined $Value ) {
+        ${ $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetTempValue( ValueName => 'GetSuccess' ) }++;
         if ( $Self->{CacheInMemory} && ( $Param{CacheInMemory} // 1 ) ) {
             $Self->{Cache}->{ $Param{Type} }->{ $Param{Key} } = $Value;
         }
@@ -434,7 +436,7 @@ sub DESTROY {
         Callback => sub {
             my $Metrics = shift;
            
-            for my $CounterName (qw( Get Set Delete )) {
+            for my $CounterName (qw( Get GetSuccess Set Delete )) {
                 $Metrics->{CacheOperations}->inc(
                     $Host, $CounterName, ${ $HelperObject->GetTempValue( ValueName => $CounterName ) },
                 );

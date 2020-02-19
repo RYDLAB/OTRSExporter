@@ -1,6 +1,5 @@
 # --
-# Copyright (C) 2001-2020 OTRS AG, https://otrs.com/
-# --
+# Copyright (C) 2001-2020 OTRS AG, https://otrs.com/ # --
 # This software comes with ABSOLUTELY NO WARRANTY. For details, see
 # the enclosed file COPYING for license information (GPL). If you
 # did not receive this file, see https://www.gnu.org/licenses/gpl-3.0.txt.
@@ -14,7 +13,7 @@ use warnings;
 use Net::Prometheus;
 use Net::Prometheus::ProcessCollector::linux;
 
-use Kernel::System::VariableCheck qw( IsHashRefWithData );
+use Kernel::System::VariableCheck qw( IsArrayRefWithData IsHashRefWithData );
 use Proc::Find qw(find_proc);
 
 our @ObjectDependencies = (
@@ -79,9 +78,65 @@ sub Change {
 sub Render {
     my $Self = shift;
 
+    $Self->RefreshMetrics;
+
     $Self->_LoadSharedMetrics || return 'empty result';
 
     $Self->{PrometheusObject}->render;
+}
+
+sub RefreshMetrics {
+    my $Self = shift;
+
+    # Refresh daemon recurrent tasks metrics
+    my $RecurrentTasks = [];
+    my $DaemonSummary  = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetDaemonTasksSummary;
+    my $Host           = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost;
+
+    for my $Summary (@$DaemonSummary) {
+        next if $Summary->{Header} ne 'Recurrent cron tasks:';
+        $RecurrentTasks = $Summary->{Data};
+    }
+
+    if (!IsArrayRefWithData($RecurrentTasks)) {
+        $Kernel::OM->Get('Kernel::System::Log')->Log(
+            Priority => 'error',
+            Message  => 'Didn\'t get any data about recurrent tasks',
+        );
+        
+        return;
+    }
+
+    $Self->Change(
+        Callback => sub {
+            my $Metrics = shift;
+
+            for my $Task (@$RecurrentTasks) {
+                my $WorkerRunningTime = $& if $Task->{LastWorkerRunningTime} =~ /\d/;
+
+                $Metrics->{RecurrentTaskDuration}->set(
+                    $Host, $Task->{Name}, $WorkerRunningTime // -1,
+                );
+
+                my $SuccessResult = -1;
+
+                if ( $Task->{LastWorkerStatus} eq 'Success' ) {
+                    $SuccessResult = 1;
+                }
+                elsif ( $Task->{LastWorkerStatus} eq 'Fail' ) {
+                    $SuccessResult = 0; 
+                }
+
+                $Metrics->{RecurrentTaskSuccess}->set(
+                    $Host, $Task->{Name}, $SuccessResult,
+                );
+            }
+
+            return 1;
+        }
+    );
+ 
+    return 1;
 }
 
 sub NewProcessCollector {
@@ -175,7 +230,6 @@ sub UpdateMetrics {
         }
     );
 
-
     return 1;
 }
 
@@ -205,7 +259,6 @@ sub _RegisterDefaultMetrics {
 
     my $HTTPMetricGroup   = $Self->{PrometheusObject}->new_metricgroup(namespace => 'http');
     my $OTRSMetricGroup   = $Self->{PrometheusObject}->new_metricgroup(namespace => 'otrs');
-    my $CacheMetricGroup  = $Self->{PrometheusObject}->new_metricgroup(namespace => 'cache');
 
     # Initialize HTTP metric group
     $Self->{Metrics}{HTTPRequestDurationSeconds} = $HTTPMetricGroup->new_histogram(
@@ -259,12 +312,28 @@ sub _RegisterDefaultMetrics {
         labels => [qw( host queue status )],
     );
 
-    # Initialize Cache metric group
-    $Self->{Metrics}{CacheOperations} = $CacheMetricGroup->new_counter(
+    # Initialize cache metrics group
+    $Self->{Metrics}{CacheOperations} = $Self->{PrometheusObject}->new_counter(
         namespace => 'cache',
         name      => 'operations',
         help      => 'Number of calls methods to manipulate cache',
         labels    => [qw( host operation )],
+    );
+
+    # Initialize recurrent tasks metrics
+    $Self->{Metrics}{RecurrentTaskDuration} = $Self->{PrometheusObject}->new_gauge(
+        namespace => 'recurrent_task',
+        name      => 'duration',
+        help      => 'Duration of the recurrent daemon tasks',
+        labels    => [qw( host name )],
+        buckets   => [ 1, 2, 3, 4, 5, 6, 7, 9, 10, 15, 20, 40, 60, 120 ],
+    );
+
+    $Self->{Metrics}{RecurrentTaskSuccess} = $Self->{PrometheusObject}->new_gauge(
+        namespace => 'recurrent_task',
+        name      => 'success',
+        help      => 'Last recurrent task worker result',
+        labels    => [qw( host name )],
     );
 
     return 1;

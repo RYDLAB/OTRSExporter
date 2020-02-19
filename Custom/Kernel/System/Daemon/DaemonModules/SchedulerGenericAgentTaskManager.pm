@@ -82,13 +82,6 @@ sub new {
     $Self->{Debug}      = $Param{Debug};
     $Self->{DaemonName} = 'Daemon: SchedulerGenericAgentTaskManager';
 
-    my $Host = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost;
-    $Kernel::OM->Get('Kernel::System::Prometheus')->NewProcessCollector(
-        PID    => $$,
-        Prefix =>  'daemon_process',
-        Labels => [ host => $Host, worker => $$, name => 'GenericAgentTaskManager' ],
-    );
-
     return $Self;
 }
 
@@ -109,6 +102,13 @@ sub Run {
     return if !$Self->{SchedulerDBObject}->GenericAgentTaskToExecute(
         NodeID => $Self->{NodeID},
         PID    => $$,
+    );
+
+    my $Host = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost;
+    $Kernel::OM->Get('Kernel::System::Prometheus')->NewProcessCollector(
+        PID    => $$,
+        Prefix =>  'daemon_process',
+        Labels => [ host => $Host, worker => $$, name => 'GenericAgentTaskManager' ],
     );
 
     return 1;

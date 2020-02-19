@@ -21,7 +21,6 @@
         <Description Translatable="1">Intervals for updating or cleaning metrics</Description>
         <Value>
             <Hash>
-                <Item ValueType="String" Key="UpdateMetricsInterval">20</Item>
                 <Item ValueType="String" Key="CleanMemoryInterval">500</Item>
                 <Item ValueType="String" Key="SharedMemoryKey">1999</Item>
                 <Item ValueType="String" Key="ServerCMND">/usr/sbin/apache2 -k start</Item>

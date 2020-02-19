@@ -58,4 +58,47 @@ sub GetCountdown {
    return 0;
 }
 
+sub GetDaemonTasksSummary {
+    my $DaemonModuleConfig = $Kernel::OM->Get('Kernel::Config')->Get('DaemonModules') || {};
+
+    my @DaemonSummary;
+    
+    for my $Module ( keys %{$DaemonModuleConfig} ) {
+
+        # skip not well configured modules
+        next if !$Module;
+        next if !$DaemonModuleConfig->{$Module};
+        next if ref $DaemonModuleConfig->{$Module} ne 'HASH';
+        next if !$DaemonModuleConfig->{$Module}->{Module};
+
+        my $DaemonObject;
+
+        # create daemon object
+        eval {
+            $DaemonObject = $Kernel::OM->Get( $DaemonModuleConfig->{$Module}->{Module} );
+        };
+
+        # skip module if object could not be created or does not provide Summary()
+        next if !$DaemonObject;
+        next if !$DaemonObject->can('Summary');
+
+        # execute Summary
+        my @Summary;
+        eval {
+            @Summary = $DaemonObject->Summary();
+        };
+
+        # skip if the result is empty or in a wrong format;
+        next if !@Summary;
+        next if ref $Summary[0] ne 'HASH';
+
+        for my $SummaryItem (@Summary) {
+            push @DaemonSummary, $SummaryItem;
+        }
+
+    }
+
+    return \@DaemonSummary;
+}
+
 1

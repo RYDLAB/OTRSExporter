@@ -86,13 +86,6 @@ sub new {
     $Self->{DaemonName} = 'Daemon: SystemConfigurationSyncManager';
 
 
-    my $Host = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost;
-    $Kernel::OM->Get('Kernel::System::Prometheus')->NewProcessCollector(
-        PID    => $$,
-        Prefix => 'daemon_process',
-        Labels => [ host => $Host, worker => $$, name => 'SystemConfigurationSyncManager' ],
-    );
-
     return $Self;
 }
 
@@ -109,6 +102,13 @@ sub PreRun {
 
 sub Run {
     my ( $Self, %Param ) = @_;
+
+    my $Host = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost;
+    $Kernel::OM->Get('Kernel::System::Prometheus')->NewProcessCollector(
+        PID    => $$,
+        Prefix => 'daemon_process',
+        Labels => [ host => $Host, worker => $$, name => 'SystemConfigurationSyncManager' ],
+    );
 
     $Kernel::OM->ObjectsDiscard(
         Objects => [ 'Kernel::Config', ],
