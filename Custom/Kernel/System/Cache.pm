@@ -16,6 +16,7 @@ our @ObjectDependencies = (
     'Kernel::System::Log',
     'Kernel::System::Prometheus',
     'Kernel::System::Prometheus::Helper',
+    'Kernel::System::Prometheus::MetricManager',
 );
 
 =head1 NAME
@@ -428,6 +429,8 @@ sub CleanUp {
 }
 
 sub DESTROY {
+    return if !$Kernel::OM->Get('Kernel::System::Prometheus::MetricManager')->IsMetricEnabled('CacheOperations');
+
     my $PrometheusObject = $Kernel::OM->Get('Kernel::System::Prometheus');
     my $HelperObject     = $Kernel::OM->Get('Kernel::System::Prometheus::Helper');
     my $Host = $HelperObject->GetHost;

@@ -28,6 +28,7 @@ our @ObjectDependencies = (
     'Kernel::System::Storable',
     'Kernel::System::Prometheus',
     'Kernel::System::Prometheus::Helper',
+    'Kernel::System::Prometheus::MetricManager',
 );
 
 =head1 NAME
@@ -131,12 +132,14 @@ sub PreRun {
 sub Run {
     my ( $Self, %Param ) = @_;
 
-    my $Host = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost;
-    $Kernel::OM->Get('Kernel::System::Prometheus')->NewProcessCollector(
-        PID    => $$,
-        Prefix => 'daemon_process',
-        Labels => [ host => $Host, worker => $$, name => 'TaskWorker' ],
-    );
+    if ($Kernel::OM->Get('Kernel::System::Prometheus::MetricManager')->IsMetricEnabled('DaemonProcessCollector')) {
+        my $Host = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost;
+        $Kernel::OM->Get('Kernel::System::Prometheus')->NewProcessCollector(
+            PID    => $$,
+            Prefix => 'daemon_process',
+            Labels => [ host => $Host, worker => $$, name => 'TaskWorker' ],
+        );
+    }
 
     $Self->{CurrentWorkersCount} = scalar keys %{ $Self->{CurrentWorkers} };
 

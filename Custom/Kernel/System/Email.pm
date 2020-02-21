@@ -30,6 +30,7 @@ our @ObjectDependencies = (
     'Kernel::System::CommunicationLog',
     'Kernel::System::Prometheus',
     'Kernel::System::Prometheus::Helper',
+    'Kernel::System::Prometheus::MetricManager',
 );
 
 =head1 NAME
@@ -684,13 +685,15 @@ sub Send {
     );
 
 
-    my $Host = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost;
-    $Kernel::OM->Get('Kernel::System::Prometheus')->Change(
-        Callback => sub {
-            my $Metrics = shift;
-            $Metrics->{OTRSOutgoingMailTotal}->inc($Host);
-        },
-    );
+    if ( $Kernel::OM->Get('Kernel::System::Prometheus::MetricManager')->IsMetricEnabled('OTRSOutgoingMailTotal') ) {
+        my $Host = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost;
+        $Kernel::OM->Get('Kernel::System::Prometheus')->Change(
+            Callback => sub {
+                my $Metrics = shift;
+                $Metrics->{OTRSOutgoingMailTotal}->inc($Host);
+            },
+        );
+    }
 
     return $SendSuccess->(
         Data => {

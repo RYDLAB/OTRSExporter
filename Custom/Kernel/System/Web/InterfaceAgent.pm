@@ -31,6 +31,7 @@ our @ObjectDependencies = (
     'Kernel::System::Valid',
     'Kernel::System::Prometheus',
     'Kernel::System::Prometheus::Helper',
+    'Kernel::System::Prometheus::MetricManager',
 );
 
 =head1 NAME
@@ -1124,10 +1125,16 @@ sub Run {
 
 
         # Get prometheus to record metrics ( response_size_bytes and request duration )
-        my $PrometheusObject = $Kernel::OM->Get('Kernel::System::Prometheus');
+        my $MetricManager = $Kernel::OM->Get('Kernel::System::Prometheus::MetricManager');
+        if(
+            $MetricManager->IsMetricEnabled('HTTPRequestDurationSeconds')
+            && $MetricManager->IsMetricEnabled('HTTPResponseSizeBytes')
+            )
+        
         {
             use bytes;
 
+            my $PrometheusObject = $Kernel::OM->Get('Kernel::System::Prometheus');
             my $Host = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost;
             my $ElapsedTime = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetCountdown;
 

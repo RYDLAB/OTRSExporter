@@ -24,6 +24,7 @@ our @ObjectDependencies = (
     'Kernel::System::Log',
     'Kernel::System::Prometheus',
     'Kernel::System::Prometheus::Helper',
+    'Kernel::System::Prometheus::MetricManager',
 );
 
 =head1 NAME
@@ -104,18 +105,20 @@ sub Run {
         PID    => $$,
     );
 
-    my $Host = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost;
-    $Kernel::OM->Get('Kernel::System::Prometheus')->NewProcessCollector(
-        PID    => $$,
-        Prefix => 'daemon_process',
-        Labels => [ host => $Host, worker => $$, name => 'CronTaskManager' ],
-    );
+    if ($Kernel::OM->Get('Kernel::System::Prometheus::MetricManager')->IsMetricEnabled('DaemonProcessCollector')) {
+        my $Host = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost;
+        $Kernel::OM->Get('Kernel::System::Prometheus')->NewProcessCollector(
+            PID    => $$,
+            Prefix => 'daemon_process',
+            Labels => [ host => $Host, worker => $$, name => 'CronTaskManager' ],
+        );
 
-    $Kernel::OM->Get('Kernel::System::Prometheus')->NewProcessCollector(
-        PID    => getppid,
-        Prefix => 'daemon_process',
-        Labels => [ host => $Host, worker => getppid, name => 'MainDaemon' ],
-    );
+        $Kernel::OM->Get('Kernel::System::Prometheus')->NewProcessCollector(
+            PID    => getppid,
+            Prefix => 'daemon_process',
+            Labels => [ host => $Host, worker => getppid, name => 'MainDaemon' ],
+        );
+    }
 
     return 1;
 }

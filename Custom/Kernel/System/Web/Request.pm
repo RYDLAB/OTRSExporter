@@ -26,6 +26,7 @@ our @ObjectDependencies = (
     'Kernel::System::Main',
     'Kernel::System::Prometheus',
     'Kernel::System::Prometheus::Helper',
+    'Kernel::System::Prometheus::MetricManager',
 );
 
 =head1 NAME
@@ -65,13 +66,15 @@ before calling Kernel::System::Web::Request->new();
 sub new {
     my ( $Type, %Param ) = @_;
 
-    my $Host = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost;
-    $Kernel::OM->Get('Kernel::System::Prometheus')->Change(
-        Callback => sub {
-            my $Metrics = shift;
-            $Metrics->{HTTPRequestsTotal}->inc( $Host, $$ );
-        },
-    );
+    if ($Kernel::OM->Get('Kernel::System::Prometheus::MetricManager')->IsMetricEnabled('HTTPRequestsTotal')) {
+        my $Host = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost;
+        $Kernel::OM->Get('Kernel::System::Prometheus')->Change(
+            Callback => sub {
+                my $Metrics = shift;
+                $Metrics->{HTTPRequestsTotal}->inc( $Host, $$ );
+            },
+        );
+    }
 
     # allocate new hash for object
     my $Self = {};

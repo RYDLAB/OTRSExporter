@@ -17,6 +17,7 @@ use Kernel::System::VariableCheck qw( IsArrayRefWithData IsHashRefWithData );
 use Proc::Find qw(find_proc);
 
 our @ObjectDependencies = (
+    'Kernel::System::Prometheus::MetricManager',
     'Kernel::System::Prometheus::Helper',
     'Kernel::System::Prometheus::Guard',
     'Kernel::System::DB',
@@ -63,7 +64,6 @@ sub new {
         );
 
         $Self->_RegisterDefaultMetrics;
-        $Self->{Guard}->Store( Data => $Self->{Metrics} );
     }
 
     return $Self;
@@ -87,6 +87,14 @@ sub Render {
 
 sub RefreshMetrics {
     my $Self = shift;
+
+    my $MetricManager = $Kernel::OM->Get('Kernel::System::Prometheus::MetricManager');
+    my $RTDurationEnabled = $MetricManager->IsMetricEnabled('RecurrentTaskDuration');
+    my $RTSuccessEnabled  = $MetricManager->IsMetricEnabled('RecurrentTaskSuccess');
+
+    unless ( $RTDurationEnabled || $RTSuccessEnabled ) {
+        return;
+    }
 
     # Refresh daemon recurrent tasks metrics
     my $RecurrentTasks = [];
@@ -112,24 +120,28 @@ sub RefreshMetrics {
             my $Metrics = shift;
 
             for my $Task (@$RecurrentTasks) {
-                my $WorkerRunningTime = $& if $Task->{LastWorkerRunningTime} =~ /\d/;
+                if ($RTDurationEnabled) { 
+                    my $WorkerRunningTime = $& if $Task->{LastWorkerRunningTime} =~ /\d/;
 
-                $Metrics->{RecurrentTaskDuration}->set(
-                    $Host, $Task->{Name}, $WorkerRunningTime // -1,
-                );
-
-                my $SuccessResult = -1;
-
-                if ( $Task->{LastWorkerStatus} eq 'Success' ) {
-                    $SuccessResult = 1;
-                }
-                elsif ( $Task->{LastWorkerStatus} eq 'Fail' ) {
-                    $SuccessResult = 0; 
+                    $Metrics->{RecurrentTaskDuration}->set(
+                        $Host, $Task->{Name}, $WorkerRunningTime // -1,
+                    );
                 }
 
-                $Metrics->{RecurrentTaskSuccess}->set(
-                    $Host, $Task->{Name}, $SuccessResult,
-                );
+                if ($RTSuccessEnabled) {
+                    my $SuccessResult = -1;
+
+                    if ( $Task->{LastWorkerStatus} eq 'Success' ) {
+                        $SuccessResult = 1;
+                    }
+                    elsif ( $Task->{LastWorkerStatus} eq 'Fail' ) {
+                        $SuccessResult = 0; 
+                    }
+
+                    $Metrics->{RecurrentTaskSuccess}->set(
+                        $Host, $Task->{Name}, $SuccessResult,
+                    );
+                }
             }
 
             return 1;
@@ -163,45 +175,61 @@ sub NewProcessCollector {
     return 1;
 }
 
-sub UpdateMetrics {
+sub UpdateDefaultMetrics {
     my ( $Self, %Param ) = @_;
+
+    my $MetricManager = $Kernel::OM->Get('Kernel::System::Prometheus::MetricManager');
+    my $TicketMetricEnabled = $MetricManager->IsMetricEnabled('OTRSTicketTotal');
+    my $ArticleMetricEnabled = $MetricManager->IsMetricEnabled('OTRSArticleTotal');
+    my $HTTPProcMetricEnabled = $MetricManager->IsMetricEnabled('HTTPProcessCollector');
+
+    unless( $HTTPProcMetricEnabled || $TicketMetricEnabled || $ArticleMetricEnabled ) {
+        return;
+    }
 
     my $DBObject = $Kernel::OM->Get('Kernel::System::DB');
 
     # Get article total info
     my @ArticleInfo;
 
-    return if !$DBObject->Prepare(
-        SQL => 'SELECT queue.name, ticket_state.name, COUNT(*) FROM article
-                JOIN ticket ON article.ticket_id = ticket.id
-                JOIN queue ON ticket.queue_id = queue.id
-                JOIN ticket_state ON ticket.ticket_state_id = ticket_state.id
-                GROUP BY queue.name, ticket_state.name',
-    );
+    if ($ArticleMetricEnabled) {
+        return if !$DBObject->Prepare(
+            SQL => 'SELECT queue.name, ticket_state.name, COUNT(*) FROM article
+                    JOIN ticket ON article.ticket_id = ticket.id
+                    JOIN queue ON ticket.queue_id = queue.id
+                    JOIN ticket_state ON ticket.ticket_state_id = ticket_state.id
+                    GROUP BY queue.name, ticket_state.name',
+        );
 
-    while ( my @Row = $DBObject->FetchrowArray ) {
-        my ( $Queue, $Status, $Num ) = @Row;
-        push @ArticleInfo, [ $Queue, $Status, $Num ];
+        while ( my @Row = $DBObject->FetchrowArray ) {
+            my ( $Queue, $Status, $Num ) = @Row;
+            push @ArticleInfo, [ $Queue, $Status, $Num ];
+        }
     }
 
     # Get ticket info
     my @TicketInfo;
 
-    return if !$DBObject->Prepare(
-        SQL => 'SELECT queue.name, ticket_state.name, count(*) FROM ticket
-                JOIN queue ON queue.id = ticket.queue_id
-                JOIN ticket_state ON ticket_state.id = ticket.ticket_state_id
-                GROUP BY queue.name, ticket_state.name',
-    );
+    if($TicketMetricEnabled) {
+        return if !$DBObject->Prepare(
+            SQL => 'SELECT queue.name, ticket_state.name, count(*) FROM ticket
+                    JOIN queue ON queue.id = ticket.queue_id
+                    JOIN ticket_state ON ticket_state.id = ticket.ticket_state_id
+                    GROUP BY queue.name, ticket_state.name',
+        );
 
-    while ( my @Row = $DBObject->FetchrowArray ) {
-        my ( $Queue, $Status, $Num ) = @Row;
-        push @TicketInfo, [ $Queue, $Status, $Num ];
+        while ( my @Row = $DBObject->FetchrowArray ) {
+            my ( $Queue, $Status, $Num ) = @Row;
+            push @TicketInfo, [ $Queue, $Status, $Num ];
+        }
     }
 
     # Get http processes pids
-    my $ServerCMND = $Self->{Settings}{ServerCMND};
-    my $ServerPids = find_proc( cmndline => $ServerCMND );
+    my $ServerPids;
+    if ($HTTPProcMetricEnabled) {
+        my $ServerCMND = $Self->{Settings}{ServerCMND};
+        $ServerPids = find_proc( cmndline => $ServerCMND );
+    }
 
     # Record info as metrics
     my $Host = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost;
@@ -210,23 +238,31 @@ sub UpdateMetrics {
         Callback => sub {
             my $Metrics = shift;
 
-            for my $PID (@$ServerPids) {
-                $Metrics->{"ProcessCollector$PID"} = Net::Prometheus::ProcessCollector->new(
-                    pid    => $PID,
-                    labels => [ host => $Host, worker => $PID ],
-                    prefix => 'http_process',
-                );
+            if (IsArrayRefWithData($ServerPids)) {
+                for my $PID (@$ServerPids) {
+                    $Metrics->{"ProcessCollector$PID"} = Net::Prometheus::ProcessCollector->new(
+                        pid    => $PID,
+                        labels => [ host => $Host, worker => $PID ],
+                        prefix => 'http_process',
+                    );
+                }
             }
 
-            for my $Row (@ArticleInfo) {
-                my ( $Queue, $Status, $Num ) = @$Row;
-                $Metrics->{OTRSArticleTotal}->set( $Host, $Queue, $Status, $Num );
+            if (@ArticleInfo) {
+                for my $Row (@ArticleInfo) {
+                    my ( $Queue, $Status, $Num ) = @$Row;
+                    $Metrics->{OTRSArticleTotal}->set( $Host, $Queue, $Status, $Num );
+                }
             }
 
-            for my $Row (@TicketInfo) {
-                my ( $Queue, $Status, $Num ) = @$Row;
-                $Metrics->{OTRSTicketTotal}->set( $Host, $Queue, $Status, $Num );
+            if (@TicketInfo) {
+                for my $Row (@TicketInfo) {
+                    my ( $Queue, $Status, $Num ) = @$Row;
+                    $Metrics->{OTRSTicketTotal}->set( $Host, $Queue, $Status, $Num );
+                }
             }
+
+            return 1;
         }
     );
 
@@ -256,85 +292,10 @@ sub _LoadSharedMetrics {
 
 sub _RegisterDefaultMetrics {
     my $Self = shift;
+ 
+    my $Metrics = $Kernel::OM->Get('Kernel::System::Prometheus::MetricManager')->CreateDefaultMetrics;
 
-    my $HTTPMetricGroup   = $Self->{PrometheusObject}->new_metricgroup(namespace => 'http');
-    my $OTRSMetricGroup   = $Self->{PrometheusObject}->new_metricgroup(namespace => 'otrs');
-
-    # Initialize HTTP metric group
-    $Self->{Metrics}{HTTPRequestDurationSeconds} = $HTTPMetricGroup->new_histogram(
-        name    => 'request_duration_seconds',
-        help    => 'The duration of the request in seconds',
-        labels  => [qw( host worker method route )],
-    );
-
-    $Self->{Metrics}{HTTPResponseSizeBytes} = $HTTPMetricGroup->new_histogram(
-        name    => 'response_size_bytes',
-        help    => 'The size of the response in bytes',
-        labels  => [qw( host worker)],
-        buckets => [ 50, 100, 500, 1000, 5000, 10000, 25000, 50000, 100000, 1000000 ],
-    );
-
-    $Self->{Metrics}{HTTPRequestsTotal} = $HTTPMetricGroup->new_counter(
-        name   => 'requests_total',
-        help   => 'The total number of the HTTP requests',
-        labels => [qw( host worker)],
-    );
-
-
-    # Initialize OTRS metric group
-    $Self->{Metrics}{OTRSIncomeMailTotal} = $OTRSMetricGroup->new_counter(
-        name   => 'income_mail_total',
-        help   => 'The number of incoming mail',
-        labels => [qw(host)],
-    );
-
-    $Self->{Metrics}{OTRSOutgoingMailTotal} = $OTRSMetricGroup->new_counter(
-        name   => 'outgoing_mail_total',
-        help   => 'The number of outgoing mail',
-        labels => [qw(host)],
-    );
-
-    $Self->{Metrics}{OTRSTicketTotal} = $OTRSMetricGroup->new_gauge(
-        name   => 'ticket_total',
-        help   => 'The number of tickets',
-        labels => [qw( host queue status )],
-    );
-
-    $Self->{Metrics}{OTRSLogsTotal} = $OTRSMetricGroup->new_counter(
-        name   => 'logs_total',
-        help   => 'The number of the logs',
-        labels => [qw( host priority )],
-    );
-
-    $Self->{Metrics}{OTRSArticleTotal} = $OTRSMetricGroup->new_gauge(
-        name   => 'article_total',
-        help   => 'The number of the articles',
-        labels => [qw( host queue status )],
-    );
-
-    # Initialize cache metrics group
-    $Self->{Metrics}{CacheOperations} = $Self->{PrometheusObject}->new_counter(
-        namespace => 'cache',
-        name      => 'operations',
-        help      => 'Number of calls methods to manipulate cache',
-        labels    => [qw( host operation )],
-    );
-
-    # Initialize recurrent tasks metrics
-    $Self->{Metrics}{RecurrentTaskDuration} = $Self->{PrometheusObject}->new_gauge(
-        namespace => 'recurrent_task',
-        name      => 'duration',
-        help      => 'Duration of the recurrent daemon tasks',
-        labels    => [qw( host name )],
-        buckets   => [ 1, 2, 3, 4, 5, 6, 7, 9, 10, 15, 20, 40, 60, 120 ],
-    );
-
-    $Self->{Metrics}{RecurrentTaskSuccess} = $Self->{PrometheusObject}->new_gauge(
-        namespace => 'recurrent_task',
-        name      => 'success',
-        help      => 'Last recurrent task worker result',
-        labels    => [qw( host name )],
-    );
+    $Self->{Guard}->Store( Data => $Metrics );
 
     return 1;
 }
