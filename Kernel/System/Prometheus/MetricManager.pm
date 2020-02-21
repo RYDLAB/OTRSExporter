@@ -13,6 +13,7 @@ use warnings;
 
 use Net::Prometheus;
 use List::Util qw(any);
+use Kernel::System::VariableCheck qw( IsArrayRefWithData IsHashRefWithData );
 
 our @ObjectDependencies = (
     'Kernel::Config',
@@ -25,7 +26,7 @@ sub new {
     bless( $Self, $Type );
 
     $Self->{EnabledMetricNames} = $Kernel::OM->Get('Kernel::Config')->Get('Prometheus::Metrics::Default::Enabled');
- 
+
     return $Self;
 }
 
@@ -39,10 +40,56 @@ sub IsMetricEnabled {
     return 0;
 }
 
+sub IsCustomMetricsEnabled {
+    my $Self = shift;
+    return $Kernel::OM->Get('Kernel::Config')->Get('Prometheus::Metrics::Custom::IsEnabled');
+}
+
+sub CreateCustomMetrics {
+    my $Self = shift;
+
+    my $CustomMetricTemplates = $Kernel::OM->Get('Kernel::Config')->Get('Prometheus::Metrics::Custom::Configuration');
+
+    return if !IsArrayRefWithData($CustomMetricTemplates);
+
+    my $MetricMaker = Net::Prometheus->new;
+    my $ValidMetricTypes = $Kernel::OM->Get('Kernel::Config')->Get('Prometheus::MetricTypes');
+
+    my %CustomMetrics;
+
+    for my $Template ( @{$CustomMetricTemplates} ) {
+        next if !IsArrayRefWithData($Template->{Type});
+        next if !IsArrayRefWithData($Template->{Name});
+        next if !IsArrayRefWithData($Template->{Help});
+
+        my $Type = lc $Template->{Type}[0];
+        unless ( any { $_ eq $Type } @{$ValidMetricTypes} ) {
+            next;
+        }
+
+        my $CreatingMethod = "new_$Type";
+        my $Namespace = lc $Template->{Namespace}[0] if IsArrayRefWithData($Template->{Namespace});
+        my $Name = lc $Template->{Name}[0];
+        my $Help = $Template->{Help}[0];
+        my $Labels = $Template->{Labels} if IsArrayRefWithData($Template->{Labels});
+        my $Buckets = $Template->{Buckets} if IsArrayRefWithData($Template->{Buckets});
+
+        $CustomMetrics{$Name} = $MetricMaker->$CreatingMethod(
+            namespace => $Namespace // undef,
+            name      => $Name,
+            help      => $Help,
+            labels    => $Labels    // undef,
+            buckets   => $Buckets   // undef,
+        );
+    }
+
+    return \%CustomMetrics;
+}
+
 sub CreateDefaultMetrics {
     my $Self = shift;
- 
-    my $Constructors = $Self->_GetMetricConstructors;
+
+    my $Constructors = $Self->_GetDefaultMetricsConstructors;
     my $Metrics = {};
 
     for my $MetricName (@{ $Self->{EnabledMetricNames} }) {
@@ -53,7 +100,7 @@ sub CreateDefaultMetrics {
     return $Metrics;
 }
 
-sub _GetMetricConstructors {
+sub _GetDefaultMetricsConstructors {
     my $Self = shift;
 
     my $MetricCreator = Net::Prometheus->new;

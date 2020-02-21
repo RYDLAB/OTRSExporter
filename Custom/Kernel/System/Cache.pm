@@ -438,7 +438,7 @@ sub DESTROY {
     $PrometheusObject->Change(
         Callback => sub {
             my $Metrics = shift;
-           
+
             for my $CounterName (qw( Get GetSuccess Set Delete )) {
                 $Metrics->{CacheOperations}->inc(
                     $Host, $CounterName, ${ $HelperObject->GetTempValue( ValueName => $CounterName ) },

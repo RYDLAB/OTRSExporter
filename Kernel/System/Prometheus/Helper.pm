@@ -62,7 +62,7 @@ sub GetDaemonTasksSummary {
     my $DaemonModuleConfig = $Kernel::OM->Get('Kernel::Config')->Get('DaemonModules') || {};
 
     my @DaemonSummary;
-    
+
     for my $Module ( keys %{$DaemonModuleConfig} ) {
 
         # skip not well configured modules

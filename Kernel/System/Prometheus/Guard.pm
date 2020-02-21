@@ -46,7 +46,21 @@ sub new {
 sub Change {
     my ( $Self, %Param ) = @_;
 
-    $Self->LockMemory;
+    if (!$Param{Callback}) {
+        $Kernel::OM->Get('Kernel::System::Log')->Log(
+            Priority => 'error',
+            Message  => 'Callback is empty!',
+        );
+    }
+
+    if (!$Self->LockMemory( LockFlag => LOCK_EX|LOCK_NB )) {
+        $Kernel::OM->Get('Kernel::System::Log')->Log(
+            Priority => 'error',
+            Message  => 'Shared memory already locked by another process!!!',
+        );
+
+        return;
+    }
 
     my $Data = $Self->Fetch;
 

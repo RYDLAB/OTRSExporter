@@ -63,7 +63,7 @@ sub new {
             Message  => 'Shared memory is empty. Creating new metrics...',
         );
 
-        $Self->_RegisterDefaultMetrics;
+        $Self->_CreateMetrics;
     }
 
     return $Self;
@@ -111,7 +111,7 @@ sub RefreshMetrics {
             Priority => 'error',
             Message  => 'Didn\'t get any data about recurrent tasks',
         );
-        
+
         return;
     }
 
@@ -120,7 +120,7 @@ sub RefreshMetrics {
             my $Metrics = shift;
 
             for my $Task (@$RecurrentTasks) {
-                if ($RTDurationEnabled) { 
+                if ($RTDurationEnabled) {
                     my $WorkerRunningTime = $& if $Task->{LastWorkerRunningTime} =~ /\d/;
 
                     $Metrics->{RecurrentTaskDuration}->set(
@@ -135,7 +135,7 @@ sub RefreshMetrics {
                         $SuccessResult = 1;
                     }
                     elsif ( $Task->{LastWorkerStatus} eq 'Fail' ) {
-                        $SuccessResult = 0; 
+                        $SuccessResult = 0;
                     }
 
                     $Metrics->{RecurrentTaskSuccess}->set(
@@ -147,7 +147,7 @@ sub RefreshMetrics {
             return 1;
         }
     );
- 
+
     return 1;
 }
 
@@ -290,10 +290,19 @@ sub _LoadSharedMetrics {
     return 1;
 }
 
-sub _RegisterDefaultMetrics {
+sub _CreateMetrics {
     my $Self = shift;
- 
-    my $Metrics = $Kernel::OM->Get('Kernel::System::Prometheus::MetricManager')->CreateDefaultMetrics;
+
+    my $MetricManager = $Kernel::OM->Get('Kernel::System::Prometheus::MetricManager');
+
+    my $Metrics = $MetricManager->CreateDefaultMetrics;
+
+    if ($MetricManager->IsCustomMetricsEnabled) {
+        my $CustomMetrics = $MetricManager->CreateCustomMetrics;
+        for my $CustomMetricName ( keys %$CustomMetrics ) {
+            $Metrics->{$CustomMetricName} = $CustomMetrics->{$CustomMetricName};
+        }
+    }
 
     $Self->{Guard}->Store( Data => $Metrics );
 

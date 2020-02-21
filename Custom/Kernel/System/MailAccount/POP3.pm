@@ -496,11 +496,11 @@ sub Fetch {
         Status => $ConnectionWithErrors || $MessagesWithError ? 'Failed' : 'Successful',
     );
 
-    
+
     if (
         $FetchCounter > 0
         && $Kernel::OM->Get('Kernel::System::Prometheus::MetricManager')->IsMetricEnabled('OTRSIncomeMailTotal')
-        ) 
+        )
     {
         my $Host = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost;
         $Kernel::OM->Get('Kernel::System::Prometheus')->Change(

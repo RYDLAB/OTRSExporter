@@ -1306,14 +1306,14 @@ sub Run {
         my $OutputResult = \$FrontendObject->Run;
         $LayoutObject->Print( Output => $OutputResult );
 
-        
+
         # Get prometheus to record metrics ( response_size_bytes and request duration )
         my $MetricManager = $Kernel::OM->Get('Kernel::System::Prometheus::MetricManager');
         if(
             $MetricManager->IsMetricEnabled('HTTPRequestDurationSeconds')
             && $MetricManager->IsMetricEnabled('HTTPResponseSizeBytes')
             )
-        
+
         {
             use bytes;
 

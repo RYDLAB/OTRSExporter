@@ -1130,7 +1130,7 @@ sub Run {
             $MetricManager->IsMetricEnabled('HTTPRequestDurationSeconds')
             && $MetricManager->IsMetricEnabled('HTTPResponseSizeBytes')
             )
-        
+
         {
             use bytes;
 
