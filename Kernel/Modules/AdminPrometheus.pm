@@ -76,28 +76,38 @@ sub Run {
             my $Result = $MetricManager->TryMetric(%Param);
 
             if ($Result) {
-                # TODO: Here should be code to save metric in database
-                # $Result = $MetricManager->PutMetric(%Param);
+                $Result = $MetricManager->NewCustomMetric(%Param);
+                if (!$Result) {
+                    $Errors{ErrorType} = 'PutMetricError';
+                    $Errors{ErrorMessage} = $Kernel::OM->Get('Kernel::System::Log')->GetLogEntry(
+                        Type     => 'Error',
+                        What     => 'Message',
+                    );
+                }
+ 
+                else {
+                    my $Output = $LayoutObject->Header;
+                    $Output .= $LayoutObject->NavigationBar;
+                    $Output .= $LayoutObject->Notify(
+                        Info => "Metric $Param{MetricName} successfully created!", 
+                    );
+                    $Output .= $LayoutObject->Output(
+                        TemplateFile => 'AdminPrometheus',
+                        Data         => \%Param,
+                    );
+                    $Output .= $LayoutObject->Footer;
 
-                my $Output = $LayoutObject->Header;
-                $Output .= $LayoutObject->NavigationBar;
-                $Output .= $LayoutObject->Notify(
-                    Info => "Metric $Param{MetricName} successfully created!", 
-                );
-                $Output .= $LayoutObject->Output(
-                    TemplateFile => 'AdminPrometheus',
-                    Data         => \%Param,
-                );
-                $Output .= $LayoutObject->Footer;
-
-                return $Output;
+                    return $Output;
+                }
             }
-            
-            $Errors{ErrorType} = 'CheckMetricError';
-            $Errors{ErrorMessage} = $Kernel::OM->Get('Kernel::System::Log')->GetLogEntry(
-                Type => 'Error',
-                What => 'Message',
-            );
+
+            else {
+                $Errors{ErrorType} = 'CheckMetricError';
+                $Errors{ErrorMessage} = $Kernel::OM->Get('Kernel::System::Log')->GetLogEntry(
+                    Type => 'Error',
+                    What => 'Message',
+                );
+            }
         }
 
         # Print page with errors info
