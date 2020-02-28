@@ -14,9 +14,12 @@ use warnings;
 use Net::Prometheus;
 use List::Util qw(any);
 use Kernel::System::VariableCheck qw( IsArrayRefWithData IsHashRefWithData );
+use Scalar::Util qw(looks_like_number);
 
 our @ObjectDependencies = (
     'Kernel::Config',
+    'Kernel::System::DB',
+    'Kernel::System::Log',
 );
 
 sub new {
@@ -25,7 +28,7 @@ sub new {
     my $Self = {};
     bless( $Self, $Type );
 
-    $Self->{EnabledMetricNames} = $Kernel::OM->Get('Kernel::Config')->Get('Prometheus::Metrics::Default::Enabled');
+    $Self->{_EnabledDefaultMetrics} = $Kernel::OM->Get('Kernel::Config')->Get('Prometheus::Metrics::Default::Enabled');
 
     return $Self;
 }
@@ -33,17 +36,194 @@ sub new {
 sub IsMetricEnabled {
     my ( $Self, $MetricName ) = @_;
 
-    if ( any { $_ eq $MetricName } @{ $Self->{EnabledMetricNames} } ) {
-        return 1;
-    }
-
-    return 0;
+    return $Self->{_EnabledDefaultMetrics}{$MetricName};
 }
 
 sub IsCustomMetricsEnabled {
     my $Self = shift;
     return $Kernel::OM->Get('Kernel::Config')->Get('Prometheus::Metrics::Custom::IsEnabled');
 }
+
+sub TryMetric {
+    my ( $Self, %Param ) = @_;
+
+    my $LogObject = $Kernel::OM->Get('Kernel::System::Log');
+
+    for my $Needed (qw( MetricName MetricHelp MetricType )) {
+        if (!$Param{$Needed}) {
+            $LogObject->Log(
+                Priority => 'error',
+                Message  => "Need $Needed to try create metric!",
+            );
+        }
+    }
+ 
+    my $MetricCreator = Net::Prometheus->new;
+    my $CreatingMethod = 'new_' . lc $Param{MetricType};
+
+    for my $ComplexParameter (qw( MetricLabels MetricBuckets )) {
+        if (!ref $Param{$ComplexParameter}) {
+            $Param{$ComplexParameter} = [ split /[\W]+/, $Param{$ComplexParameter} ];
+        }
+    }
+    
+    if ($Param{MetricBuckets}) {
+        for my $Bucket (@{ $Param{MetricBuckets} }) {
+            if (!looks_like_number($Bucket)) {
+                $LogObject->Log(
+                    Priority => 'error',
+                    Message  => 'One or more buckets are not number!',
+                );
+
+                return;
+            }
+        }
+    }
+ 
+    my $Metric = eval {
+        $MetricCreator->$CreatingMethod(
+            namespace => $Param{MetricNamespace},
+            name      => $Param{MetricName},
+            help      => $Param{MetricHelp},
+            labels    => $Param{MetricLabels},
+            buckets   => $Param{MetricBuckets},
+        );
+    };
+
+    if (!$Metric) {
+        $LogObject->Log(
+            Priority => 'error',
+            Message  => $@ || 'Something went wrong while trying to create metric',
+        );
+
+        return;
+    }
+
+    if ($Param{SQL}) {
+
+        if (!$Param{UpdateMethod}) {
+            $LogObject->Log(
+                Priority => 'error',
+                Message  => 'Need metric method with SQL!',
+            );
+
+            return;
+        }
+
+        my $DBObject = $Kernel::OM->Get('Kernel::System::DB');
+        my $UpdateMethod = $Param{UpdateMethod};
+
+        if (
+            $DBObject->Prepare(
+                SQL => $Param{SQL},
+            )
+            )
+        {
+            my @Row = $DBObject->FetchrowArray;
+            unless( eval { $Metric->$UpdateMethod(@Row) } )
+            {
+                $LogObject->Log(
+                    Priority => 'error',
+                    Message  => $@ || 'Something went wrong while trying to update metric',
+                );
+
+                return;
+            }
+        } 
+
+        else { return }
+    }
+
+    return 1;
+}
+
+# TODO: write put metric method
+=head1 DEVELOPMENT STAGE
+sub PutMetric {
+    my ( $Self, %Param ) = @_;
+
+    my $DBObject  = $Kernel::OM->Get('Kernel::System::DB');
+    my $LogObject = $Kernel::OM->Get('Kernel::System::Log');
+
+    # get metric type id in database
+    my $MetricTypeId = 0; 
+    $Param{MetricType} = lc $Param{MetricType};
+
+    # check for existing database
+    return if !$DBObject->Prepare(
+        SQL => 'SELECT id FROM prometheus_custom_metrics
+                WHERE name = ?',
+        Bind => [ $Param{MetricName} ],
+    );
+
+    if ( $DBObject->FetchrowArray ) {
+        $LogObject->Log(
+            Priority => 'Error',
+            Message  => 'Metric already exists in database!',
+        );
+
+        return;
+    }
+
+    # Put metric in DB
+    return if !$DBObject->Do(
+        SQL => 'INSERT INTO prometheus_custom_metrics(name, help, metric_type_id, metric_namespace) VALUES 
+                (?, ?, ?, ?)',
+        Bind => [ $Param{MetricName}, $Param{MetricHelp}, $MetricTypeId, $Param{MetricNamespace} ],
+    );
+
+    unless ( $Param{MetricLabels} || $Param{MetricBuckets} || $Param{SQL} ) {
+        return 1;
+    }
+
+    # get created metric's ID
+    return if !$DBObject->Prepare(
+        SQL  => 'SELECT id FROM prometheus_custom_metrics WHERE name = ?',
+        Bind => [ $Param{MetricName} ],
+    );
+    
+    my $CustomMetricId = $DBObject->FetchrowArray;
+
+    # labels and buckets can be a string. fix it
+    for my $ComplexParameter (qw( MetricLabels MetricBuckets )) {
+        if (!ref $Param{$ComplexParameter}) {
+            $Param{$ComplexParameter} = [ split /[\W]+/, $Param{$ComplexParameter} ];
+        }
+    }
+
+    if ($Param{MetricLabels}) {
+        for my $Label (@{ $Param{MetricLabels} }) {
+
+            state $QueueNum = 0;
+
+            return if !$DBObject->Do(
+                SQL  => 'INSERT INTO prometheus_custom_metric_labels(name, custom_metric_id, queue_num)
+                         VALUES ( ?, ?, ? )',
+                Bind => [ $Label, $CustomMetricId, $QueueNum ],
+            );
+
+            $QueueNum++;
+        }
+    }
+
+    if ($Param{MetricBuckets}) {
+        for my $Bucket (@{ $Param{MetricBuckets} }) {
+            return if !$DBObject->Do(
+                SQL  => 'INSERT INTO prometheus_custom_metric_buckets(custom_metric_id, value)
+                        VALUES (?, ?)',
+                Bind => [ $CustomMetricId, $Bucket ],
+            );
+        }
+    }
+
+    if ( $Param{SQL} && $Param{UpdateMethod} ) {
+        return if !$DBObject->Do(
+            SQL => 'INSERT INTO prometheus_custom_metric_sql (query_text, custom_metric_id, update_method_id)
+                    VALUES (?, ?, )',
+        );
+    }
+}
+=cut
 
 sub CreateCustomMetrics {
     my $Self = shift;
@@ -92,7 +272,7 @@ sub CreateDefaultMetrics {
     my $Constructors = $Self->_GetDefaultMetricsConstructors;
     my $Metrics = {};
 
-    for my $MetricName (@{ $Self->{EnabledMetricNames} }) {
+    for my $MetricName (keys %{ $Self->{_EnabledDefaultMetrics} }) {
         next if !$Constructors->{$MetricName};
         $Metrics->{$MetricName} = $Constructors->{$MetricName}();
     }
@@ -193,5 +373,41 @@ sub _GetDefaultMetricsConstructors {
         },
     };
 }
+
+#TODO: write database api to manage metrics
+=head1 Database API for metrics
+
+Development stage...
+
+sub MetricTypesGet {
+    my $Self = shift;
+
+    my $DBObject = $Kernel::OM->Get('Kernel::System::DB');
+
+    return if !$DBObject->Prepare( SQL => 'SELECT type_name, id FROM prometheus_metric_types' );
+
+    my %Types;
+    while ( my @Row = $DBObject->FetchrowArray ) {
+        $Types{$Row[0]} = $Row[1];
+    }
+
+    return \%Types;
+}
+
+sub CustomMetricsGet {
+    my ( $Self, %Param ) = @_;
+
+    if (!$Param{MetricName}) {
+        $Kernel::OM->Get('Kernel::System::Log')->Log(
+            Priority => 'Error',
+            Message  => 'Need metric name!',
+        );
+    }
+
+    my $DBObject = $Kernel::OM->Get('Kernel::System::DB');
+
+    return if !$DBObject->Prepare( SQL => 'SELECT' );
+}
+=cut
 
 1
