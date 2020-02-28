@@ -30,6 +30,8 @@ our @ObjectDependencies = (
     'Kernel::System::Web::Request',
     'Kernel::System::Valid',
     'Kernel::System::Prometheus',
+    'Kernel::System::Prometheus::Helper',
+    'Kernel::System::Prometheus::MetricManager',
 );
 
 =head1 NAME
@@ -68,7 +70,7 @@ sub new {
     $Self->{PerformanceLogStart} = time();
 
     # Detect time for request duration
-    $Kernel::OM->Get('Kernel::System::Prometheus')->StartCountdown;
+    $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->StartCountdown;
 
     # get debug level
     $Self->{Debug} = $Param{Debug} || 0;
@@ -1123,22 +1125,32 @@ sub Run {
 
 
         # Get prometheus to record metrics ( response_size_bytes and request duration )
-        my $PrometheusObject = $Kernel::OM->Get('Kernel::System::Prometheus');
+        my $MetricManager = $Kernel::OM->Get('Kernel::System::Prometheus::MetricManager');
+        if(
+            $MetricManager->IsMetricEnabled('HTTPRequestDurationSeconds')
+            && $MetricManager->IsMetricEnabled('HTTPResponseSizeBytes')
+            )
+
         {
             use bytes;
 
-            my $ElapsedTime = $PrometheusObject->GetCountdown;
-            my $Route = "Action=$Param{Action}&Subaction=$Param{Subaction}";
+            my $PrometheusObject = $Kernel::OM->Get('Kernel::System::Prometheus');
+            my $Host = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost;
+            my $ElapsedTime = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetCountdown;
+
+            my $Route = "Action=$Param{Action};";
+            $Route .= "Subaction=$Param{Subaction}" if $Param{Subaction};
+
             my $Method = $ENV{REQUEST_METHOD};
 
             $PrometheusObject->Change(
                 Callback => sub {
                     my $Metrics = shift;
                     $Metrics->{HTTPResponseSizeBytes}->observe(
-                        $$, length ${$OutputResult},
+                        $Host, $$, length ${$OutputResult},
                     );
                     $Metrics->{HTTPRequestDurationSeconds}->observe(
-                        $$, $Method, $Route, $ElapsedTime,
+                        $Host, $$, $Method, $Route, $ElapsedTime,
                     );
                 }
             )

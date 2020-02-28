@@ -20,6 +20,7 @@ our @ObjectDependencies = (
     'Kernel::System::Main',
     'Kernel::System::PostMaster',
     'Kernel::System::Prometheus',
+    'Kernel::System::Prometheus::Helper',
 );
 
 sub new {
@@ -495,11 +496,17 @@ sub Fetch {
         Status => $ConnectionWithErrors || $MessagesWithError ? 'Failed' : 'Successful',
     );
 
-    if ( $FetchCounter > 0 ) {
+
+    if (
+        $FetchCounter > 0
+        && $Kernel::OM->Get('Kernel::System::Prometheus::MetricManager')->IsMetricEnabled('OTRSIncomeMailTotal')
+        )
+    {
+        my $Host = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost;
         $Kernel::OM->Get('Kernel::System::Prometheus')->Change(
             Callback => sub {
                 my $Metrics = shift;
-                $Metrics->{OTRSIncomeMailTotal}->inc($FetchCounter);
+                $Metrics->{OTRSIncomeMailTotal}->inc( $Host, $FetchCounter );
             },
         );
     }
