@@ -175,4 +175,22 @@
         </Value>
     </Setting>
 
+    <Setting Name="Daemon::SchedulerCronTaskManager::Task###PrometheusUpdateCustomSQLMetrics" Required="0" Valid="1" ConfigLevel="100">
+        <Description Translatable="1">Update custom metrics from database</Description>
+        <Navigation>Daemon::SchedulerCronTaskManager::Task</Navigation>
+        <Value>
+            <Hash>
+                <Item Key="TaskName">PrometheusUpdateCustomSQLMetrics</Item>
+                <Item Key="Schedule">* * * * *</Item><!--each minute -->
+                <Item Key="Module">Kernel::System::Prometheus</Item>
+                <Item Key="Function">UpdateCustomSQLMetrics</Item>
+                <Item Key="MaximumParallelInstances">1</Item>
+                <Item Key="Params">
+                    <Array>
+                    </Array>
+                </Item>
+            </Hash>
+        </Value>
+    </Setting>
+
 </otrs_config>

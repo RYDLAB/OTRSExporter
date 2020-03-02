@@ -27,7 +27,7 @@
             <div class="Content">
                 <div class="ExplanationCreatingMetric">
                     <p class="FieldExplanation">
-                        [% Translate("Here you can create new custom metrics for Prometheus. Also you can set schedule and SQL-query(in which last column is the value for metric and other is the labels) to automatically update metric") | html %] 
+                        [% Translate("Here you can create new custom metrics for Prometheus. Also you can set schedule and SQL-query(in which last column is the value for metric and other is the labels) to automatically update metric") | html %]
                     </p>
                 </div>
             </div>

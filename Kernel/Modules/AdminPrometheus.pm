@@ -25,12 +25,12 @@ sub new {
 
 sub Run {
     my ( $Self, %Param ) = @_;
-    
+
     my $ConfigObject = $Kernel::OM->Get('Kernel::Config');
     my $LayoutObject = $Kernel::OM->Get('Kernel::Output::HTML::Layout');
 
     if ( !$ConfigObject->Get('SecureMode') ) {
-        return $LayoutObject->SecureMode;
+        return $LayoutObject->SecureMode();
     }
 
     $Param{MetricTypeStrg} = $LayoutObject->BuildSelection(
@@ -38,17 +38,17 @@ sub Run {
         Data  => [qw( Counter Gauge Histogram Summary )],
         Class => 'Modernize',
     );
-    
+
     my $ParamObject = $Kernel::OM->Get('Kernel::System::Web::Request');
 
     if ( $Self->{Subaction} eq 'CreateMetric' ) {
         my %Errors;
 
-        $LayoutObject->ChallengeTokenCheck;  
+        $LayoutObject->ChallengeTokenCheck();
 
         # get params
         for my $Parameter (
-            qw( MetricNamespace MetricName MetricHelp MetricType 
+            qw( MetricNamespace MetricName MetricHelp MetricType
                 MetricLabels MetricBuckets SQL UpdateMethod )
             )
         {
@@ -73,32 +73,33 @@ sub Run {
 
         if (!%Errors) {
             my $MetricManager = $Kernel::OM->Get('Kernel::System::Prometheus::MetricManager');
-            my $Result = $MetricManager->TryMetric(%Param);
 
-            if ($Result) {
-                $Result = $MetricManager->NewCustomMetric(%Param);
-                if (!$Result) {
-                    $Errors{ErrorType} = 'PutMetricError';
-                    $Errors{ErrorMessage} = $Kernel::OM->Get('Kernel::System::Log')->GetLogEntry(
-                        Type     => 'Error',
-                        What     => 'Message',
-                    );
-                }
- 
-                else {
-                    my $Output = $LayoutObject->Header;
-                    $Output .= $LayoutObject->NavigationBar;
+            my $TestMetricSuccess = $MetricManager->TryMetric(%Param);
+
+            if ($TestMetricSuccess) {
+                my $CreateMetricSuccess = $MetricManager->NewCustomMetric(%Param);
+
+                if ($CreateMetricSuccess) {
+
+                    my $Output = $LayoutObject->Header();
+                    $Output .= $LayoutObject->NavigationBar();
                     $Output .= $LayoutObject->Notify(
-                        Info => "Metric $Param{MetricName} successfully created!", 
+                        Info => "Metric $Param{MetricName} successfully created!",
                     );
                     $Output .= $LayoutObject->Output(
                         TemplateFile => 'AdminPrometheus',
                         Data         => \%Param,
                     );
-                    $Output .= $LayoutObject->Footer;
+                    $Output .= $LayoutObject->Footer();
 
                     return $Output;
                 }
+
+                $Errors{ErrorType} = 'PutMetricError';
+                $Errors{ErrorMessage} = $Kernel::OM->Get('Kernel::System::Log')->GetLogEntry(
+                    Type     => 'Error',
+                    What     => 'Message',
+                );
             }
 
             else {
@@ -126,13 +127,13 @@ sub Run {
                 %Errors,
             },
         );
-        $Output .= $LayoutObject->Footer;
+        $Output .= $LayoutObject->Footer();
 
         return $Output;
     }
 
-    my $Output = $LayoutObject->Header;
-    $Output .= $LayoutObject->NavigationBar;
+    my $Output = $LayoutObject->Header();
+    $Output .= $LayoutObject->NavigationBar();
     $Output .= $LayoutObject->Output(
         TemplateFile => 'AdminPrometheus',
         Data         => \%Param,
