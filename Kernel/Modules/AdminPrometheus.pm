@@ -11,6 +11,8 @@ package Kernel::Modules::AdminPrometheus;
 use strict;
 use warnings;
 
+use Kernel::System::VariableCheck qw(IsArrayRefWithData);
+
 our $ObjectManagerDisabled = 1;
 
 sub new {
@@ -28,18 +30,31 @@ sub Run {
 
     my $ConfigObject = $Kernel::OM->Get('Kernel::Config');
     my $LayoutObject = $Kernel::OM->Get('Kernel::Output::HTML::Layout');
+    my $ParamObject = $Kernel::OM->Get('Kernel::System::Web::Request');
 
     if ( !$ConfigObject->Get('SecureMode') ) {
         return $LayoutObject->SecureMode();
     }
 
+    #TODO: types and update methods we should take from database via model!
     $Param{MetricTypeStrg} = $LayoutObject->BuildSelection(
         Name  => 'MetricType',
         Data  => [qw( Counter Gauge Histogram Summary )],
         Class => 'Modernize',
     );
 
-    my $ParamObject = $Kernel::OM->Get('Kernel::System::Web::Request');
+    $Param{UpdateMethods} = $LayoutObject->BuildSelection(
+        Name  => 'UpdateMethod',
+        Data  => [qw( inc dec set observe )],
+        Class => 'Modernize',
+    );
+
+    $Param{CustomMetrics} = $Kernel::OM->Get('Kernel::System::Prometheus::MetricManager')->AllCustomMetricsInfoGet();
+    for my $Metric (@{ $Param{CustomMetrics} }) {
+        $Metric->{Labels} = join ', ', @{ $Metric->{Labels} };
+        $Metric->{Buckets} = join ', ', @{ $Metric->{Buckets} };
+    }
+
 
     if ( $Self->{Subaction} eq 'CreateMetric' ) {
         my %Errors;
@@ -130,6 +145,10 @@ sub Run {
         $Output .= $LayoutObject->Footer();
 
         return $Output;
+    }
+    
+    #TODO: Write fe-submodule for changing metric
+    elsif ( $Self->{Subaction} eq 'ChangeMetric' ) {
     }
 
     my $Output = $LayoutObject->Header();

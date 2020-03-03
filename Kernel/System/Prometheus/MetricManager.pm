@@ -300,7 +300,8 @@ sub AllCustomMetricsInfoGet {
                 FROM prometheus_custom_metrics metr
                 JOIN prometheus_metric_types types ON metr.metric_type_id = types.id
                 LEFT JOIN prometheus_custom_metric_sql sqls ON metr.id = sqls.custom_metric_id
-                LEFT JOIN prometheus_metric_update_methods methods ON sqls.update_method_id = methods.id'
+                LEFT JOIN prometheus_metric_update_methods methods ON sqls.update_method_id = methods.id
+                ORDER BY metr.name'
     );
 
     # get main info about custom_metric
@@ -435,22 +436,60 @@ sub CustomMetricGet {
     my $DBObject = $Kernel::OM->Get('Kernel::System::DB');
 
     return if !$DBObject->Prepare(
-        SQL  => 'SELECT * FROM prometheus_custom_metrics
-                 WHERE name = ?',
-        Bind => [ \$Param{MetricName} ],
+        SQL   => 'SELECT metr.id, metr.namespace, metr.name, metr.help, types.type_name, sqls.query_text, methods.name
+                  FROM prometheus_custom_metrics metr
+                  JOIN prometheus_metric_types types ON metr.metric_type_id = types.id
+                  JOIN prometheus_custom_metric_sql sqls ON metr.id = sqls.custom_metric_id
+                  JOIN prometheus_metric_update_methods methods ON sqls.update_method_id = methods.id,
+                  WHERE metr.name = ?',
+        Bind  => [ \$Param{MetricName} ],
         Limit => 1,
     );
 
     my %CustomMetric;
     while ( my @Row = $DBObject->FetchrowArray ) {
         %CustomMetric = (
-            Id        => $Row[0],
-            Name      => $Row[1],
-            Help      => $Row[2],
-            TypeId    => $Row[3],
-            Namespace => $Row[4],
+            Id           => $Row[0],
+            Namespace    => $Row[1],
+            Name         => $Row[2],
+            Help         => $Row[3],
+            Type         => $Row[4],
+            SQL          => $Row[5],
+            UpdateMethod => $Row[6],
         );
     }
+
+    # get labels info
+    return if !$DBObject->Prepare(
+        SQL  => 'SELECT labels.name FROM prometheus_custom_metrics metr
+                 JOIN prometheus_custom_metric_labels labels ON labels.custom_metric_id = metr.id
+                 WHERE metr.id = ?
+                 ORDER BY queue_num',
+        Bind => [\($CustomMetric{Id})],
+    );
+
+    my @Labels;
+    while ( my @Row = $DBObject->FetchrowArray ) {
+        push @Labels, $Row[0];
+    }
+
+    $CustomMetric{Labels} = \@Labels;
+
+    # get buckets info
+    return if !$DBObject->Prepare(
+        SQL  => 'SELECT buckets.value FROM prometheus_custom_metrics metr
+                 JOIN prometheus_custom_metric_buckets buckets ON buckets.custom_metric_id = metr.id
+                 WHERE metr.id = ?',
+        Bind => [\($CustomMetric{Id})],
+    );
+
+    my @Buckets;
+    while ( my @Row = $DBObject->FetchrowArray ) {
+        push @Buckets, $Row[0];
+    }
+
+    $CustomMetric{Buckets} = \@Buckets;
+
 
     return \%CustomMetric;
 }

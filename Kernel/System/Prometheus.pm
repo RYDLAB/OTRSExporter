@@ -317,6 +317,12 @@ sub UpdateCustomSQLMetrics {
     return 1;
 }
 
+sub ClearMemory {
+    my $Self = shift;
+
+    $Self->{Guard}->ClearMemory;
+}
+
 sub _LoadSharedMetrics {
     my $Self = shift;
 

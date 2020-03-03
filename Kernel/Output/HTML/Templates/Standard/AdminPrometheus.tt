@@ -57,26 +57,12 @@
                         <label class="Mandatory" for="MetricName"><span class="Marker">*</span> [% Translate("Name") | html %]:</label>
                         <div class="Field">
                             <input type="text" name="MetricName" id="MetricName" class="W50pc" value="[% Data.MetricName | html %]">
-                            <div id="MetricNameServerError" class="TooltipErrorMessage">
-                                <p>
-[% RenderBlockStart("MetricNameRequiredServerError") %]
-                                        [% Translate("This field is required.") | html %]
-[% RenderBlockEnd("MetricNameRequiredServerError") %]
-                                </p>
-                            </div>
                         </div>
                         <div class="Clear"></div>
 
                         <label class="Mandatory" for="MetricHelp"><span class="Marker">*</span> [% Translate("Help") | html %]:</label>
                         <div class="Field">
                             <input type="text" name="MetricHelp" id="MetricHelp" class="W50pc" value="[% Data.MetricHelp | html %]">
-                            <div id="MetricHelpServerError" class="TooltipErrorMessage">
-                                <p>
-[% RenderBlockStart("MetricHelpRequiredServerError") %]
-                                        [% Translate("This field is required.") | html %]
-[% RenderBlockEnd("MetricHelpRequiredServerError") %]
-                                </p>
-                            </div>
                         </div>
                         <div class="Clear"></div>
 
@@ -101,22 +87,12 @@
                         <label for="SQL">[% Translate("Cron SQL") | html %]:</label>
                         <div class="Field">
                             <textarea name="SQL" id="SQL" rows="3" class="W75pc">[% Data.SQL | html %]</textarea>
-                            <div id="SQLServerError" class="TooltipErrorMessage">
-                                <p>
-[% RenderBlockStart("SQLIsNotSelectServerError") %]
-                                    [% Translate("Only select queries are allowed.") | html %]
-[% RenderBlockEnd("SQLIsNotSelectServerError") %]
-[% RenderBlockStart("SQLSyntaxServerError") %]
-                                    [% Translate("The syntax of your SQL query has a mistake. Please check it.") | html %]
-[% RenderBlockEnd("SQLSyntaxServerError") %]
-                                </p>
-                            </div>
                         </div>
                         <div class="Clear"></div>
 
                         <label for="UpdateMethod">[% Translate("Update method") | html %]:</label>
                         <div class="Field">
-                            <input type="text" name="UpdateMethod" id="UpdateMethod" class="W50pc" value="[% Data.UpdateMethod | html %]">
+                            [% Data.UpdateMethods %]
                         </div>
                         <div class="Clear"></div>
 
@@ -126,6 +102,50 @@
 
                     </fieldset>
                 </form>
+            </div>
+        </div>
+        <div class="WidgetSimple">
+            <div class="Header">
+                <h2>[% Translate("Custom metrics") | html %]</h2>
+            </div>
+            <div class="Content">
+                <table class="DataTable" id="CustomMetrics">
+                    <thead>
+                        <tr>
+                            <th>[% Translate("Name") | html %]</th>
+                            <th>[% Translate("Namespace") | html %]</th>
+                            <th>[% Translate("Help") | html %]</th>
+                            <th>[% Translate("Type") | html %]</th>
+                            <th>[% Translate("Labels") | html %]</th>
+                            <th>[% Translate("Buckets") | html %]</th>
+                            <th>[% Translate("SQL") | html %]</th>
+                            <th>[% Translate("Method") | html %]</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        [% UNLESS Data.CustomMetrics %]
+                        <tr>
+                            <td colspan="8">
+                                [% Translate("No data found.") | html %]
+                            </td>
+                        </tr>
+                        [% END %]
+                        [% IF Data.CustomMetrics %]
+                            [% FOREACH Metric IN Data.CustomMetrics %]
+                                <tr>
+                                    <td><a class="AsBlock" href="[% Env("Baselink") %]Action[% Env("Action") %];Subaction=ChangeMetric;ID=[% Metric.Id | uri %]">[% Metric.Name | html %]</td>
+                                    <td>[% Metric.Namespace | html %]</td>
+                                    <td>[% Metric.Help | html %]</td>
+                                    <td>[% Metric.Type | html %]</td>
+                                    <td>[% Metric.Labels | html %]</td>
+                                    <td>[% Metric.Buckets | html %]</td>
+                                    <td>[% Metric.SQL | html %]</td>
+                                    <td>[% Metric.UpdateMethod | html %]</td>
+                                </tr>
+                            [% END %]
+                        [% END %]
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
