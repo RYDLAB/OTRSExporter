@@ -269,6 +269,60 @@ sub UpdateDefaultMetrics {
     return 1;
 }
 
+sub UpdateCustomSQLMetrics {
+    my $Self = shift;
+
+    my $MetricManager = $Kernel::OM->Get('Kernel::System::Prometheus::MetricManager');
+
+    return if !$MetricManager->IsCustomMetricsEnabled;
+
+    my $CustomMetricsSQLInfo = $MetricManager->CustomMetricsSQLInfoGet;
+
+    return if !$CustomMetricsSQLInfo;
+
+    my $DBObject = $Kernel::OM->Get('Kernel::System::DB');
+
+    my %SQLQueryResults;
+    for my $MetricName ( keys %{ $CustomMetricsSQLInfo } ) {
+        return if !$DBObject->Prepare(
+            SQL => $CustomMetricsSQLInfo->{ $MetricName }{SQL},
+        );
+
+        my @Rows;
+
+        while ( my @Row = $DBObject->FetchrowArray ) {
+            push @Rows, \@Row;
+        }
+
+        $SQLQueryResults{ $MetricName } = \@Rows;
+    }
+
+    $Self->Change (
+        Callback => sub {
+            my $Metrics = shift;
+
+            for my $MetricName ( keys %SQLQueryResults ) {
+                my $UpdateMethod = $CustomMetricsSQLInfo->{ $MetricName }{Method};
+                my $QueryResult  = $SQLQueryResults{ $MetricName };
+
+                for my $RowRef (@{ $QueryResult }) {
+                    $Metrics->{ $MetricName }->$UpdateMethod(@$RowRef);
+                }
+            }
+
+            return 1;
+        },
+    );
+
+    return 1;
+}
+
+sub ClearMemory {
+    my $Self = shift;
+
+    $Self->{Guard}->ClearMemory;
+}
+
 sub _LoadSharedMetrics {
     my $Self = shift;
 

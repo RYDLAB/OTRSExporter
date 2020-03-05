@@ -124,48 +124,10 @@ sub UnlockMemory {
     $Self->{SharedMem}->unlock;
 }
 
-sub GetDaemonTasksSummary {
-    # get daemon modules from SysConfig
-    my $DaemonModuleConfig = $Kernel::OM->Get('Kernel::Config')->Get('DaemonModules') || {};
+sub ClearMemory {
+    my $Self = shift;
 
-    my @DaemonSummary;
-
-    MODULE:
-    for my $Module ( keys %{$DaemonModuleConfig} ) {
-
-        # skip not well configured modules
-        next MODULE if !$Module;
-        next MODULE if !$DaemonModuleConfig->{$Module};
-        next MODULE if ref $DaemonModuleConfig->{$Module} ne 'HASH';
-        next MODULE if !$DaemonModuleConfig->{$Module}->{Module};
-
-        my $DaemonObject;
-
-        # create daemon object
-        eval {
-            $DaemonObject = $Kernel::OM->Get( $DaemonModuleConfig->{$Module}->{Module} );
-        };
-
-        # skip module if object could not be created or does not provide Summary()
-        next MODULE if !$DaemonObject;
-        next MODULE if !$DaemonObject->can("Summary");
-
-        # execute Summary
-        my @Summary;
-        eval {
-            @Summary = $DaemonObject->Summary();
-        };
-
-        # skip if the result is empty or in a wrong format;
-        next MODULE if !@Summary;
-        next MODULE if ref $Summary[0] ne 'HASH';
-
-        for my $SummaryItem (@Summary) {
-            push @DaemonSummary, $SummaryItem;
-        }
-    }
-
-    return \@DaemonSummary;
+    $Self->{SharedMem}->destroy(1);
 }
 
 1
