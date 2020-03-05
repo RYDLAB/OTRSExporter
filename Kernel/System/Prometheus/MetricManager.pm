@@ -867,25 +867,42 @@ sub UpdateCustomMetricUpdateMethod {
     return 1;
 }
 
-sub UpdateCustomMetricLabels {
+sub DeleteMetric {
     my ( $Self, %Param ) = @_;
 
-    unless ( $Param{MetricID} && $Param{MetricLabels} ) {
+    if ( !$Param{MetricID} ) {
         $Kernel::OM->Get('Kernel::System::Log')->Log(
-            Priority => 'error',
-            Message  => 'Need MetricID or MetricLabels!',
+            Priority => 'Error',
+            Message  => 'Need MetricID!',
         );
 
         return;
     }
 
-    if ( ref $Param{MetricLabels} ne 'ARRAY' ) {
-        $Param{MetricLabels} = [ split /[, ]+/, $Param{MetricLabels} ];
-    }
+    my $DBObject = $Kernel::OM->Get('Kernel::System::DB');
 
-    
-    #TODO: Дописать
-    ...
+    # delete labels
+    return if !$DBObject->Do(
+        SQL  => 'DELETE FROM prometheus_custom_metric_labels WHERE custom_metric_id = ?',
+        Bind => [\$Param{MetricID}],
+    );
+    # delete buckets
+    return if !$DBObject->Do(
+        SQL  => 'DELETE FROM prometheus_custom_metric_buckets WHERE custom_metric_id = ?',
+        Bind => [\$Param{MetricID}],
+    );
+    # delete sql
+    return if !$DBObject->Do(
+        SQL  => 'DELETE FROM prometheus_custom_metric_sql WHERE custom_metric_id = ?',
+        Bind => [\$Param{MetricID}],
+    );
+    # delete metric
+    return if !$DBObject->Do(
+        SQL  => 'DELETE FROM prometheus_custom_metrics WHERE id = ?',
+        Bind => [\$Param{MetricID}],
+    );
+
+    return 1;
 }
 
 1

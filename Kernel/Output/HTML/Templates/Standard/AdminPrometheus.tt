@@ -7,11 +7,11 @@
 # --
 
 <div class="MainBox ARIARoleMain LayoutFixedSidebar SidebarFirst">
-    <h1 class="InvisibleText">[% Translate("Prometheus") | html %]</h1>
+    <h1 class="InvisibleText">[% Translate("Custom metrics") | html %]</h1>
 
     [% BreadcrumbPath = [
             {
-                Name => Translate('Prometheus'),
+                Name => Translate('Custom metrics'),
             },
         ]
     %]
@@ -22,97 +22,30 @@
 
         <div class="WidgetSimple">
             <div class="Header">
+                <h2>[% Translate("Actions") | html %]</h2>
+            </div>
+            <div class="Content">
+                <ul class="ActionList">
+                    <li>
+                        <a href="[% Env("Baselink") %]Action=[% Env("Action") %];Subaction=CreateMetric;Nav=[% Data.Nav | uri %]" class="CallForAction Fullsize Center"><span><i class="fa fa-plus-square"></i>[% Translate("Add new metric") | html %]</span></a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <div class="WidgetSimple">
+            <div class="Header">
                 <h2>[% Translate("Hint") | html %] </h2>
             </div>
             <div class="Content">
-                <div class="ExplanationCreatingMetric">
-                    <p class="FieldExplanation">
-                        [% Translate("Here you can create new custom metrics for Prometheus. Also you can set schedule and SQL-query(in which last column is the value for metric and other is the labels) to automatically update metric") | html %]
-                    </p>
-                    <p class="FieldExplanation">
-                        [% Translate("if you want your metric to be updated automatically through the database, you can specify the SQL-query and update method according to the following pattern: ") %]
-                    </p>
-                    <p class="FieldExplanation">
-                        SELECT label1, label2, ... labelN, update_value FROM ...
-                    </p>
-                    <p class="FieldExplanation">
-                        [% Translate("Where label1 .. labelN are labels in your metric and update_value is value to update metric") | html %]
-                    </p>
-                </div>
+                <p class="FieldExplanation">
+                    [% Translate("Here you can see table with created custom metrics. Also you can edit them or create new") %]
+                </p>
             </div>
         </div>
 
     </div>
 
     <div class="ContentColumn">
-        <div class="WidgetSimple">
-            <div class="Header">
-                <h2>[% Translate("Creating form") | html %]</h2>
-            </div>
-
-            <div class="Content">
-                <form action="[% Env("CGIHandle") %]" method="post" class="Validate" id="AdminCreateMetricForm">
-                    <input type="hidden" name="Action" value="[% Env("Action") %]"/>
-                    <input type="hidden" name="Subaction" value="CreateMetric"/>
-
-                    <fieldset class="TableLike FixedLabelSmall">
-
-                        <label for="MetricNamespace">[% Translate("Namespace") | html %]:</label>
-                        <div class="Field">
-                            <input type="text" name="MetricNamespace" id="MetricNamespace" class="W50pc" value="[% Data.MetricNamespace | html%]">
-                        </div>
-                        <div class="Clear"></div>
-
-                        <label class="Mandatory" for="MetricName"><span class="Marker">*</span> [% Translate("Name") | html %]:</label>
-                        <div class="Field">
-                            <input type="text" name="MetricName" id="MetricName" class="W50pc" value="[% Data.MetricName | html %]">
-                        </div>
-                        <div class="Clear"></div>
-
-                        <label class="Mandatory" for="MetricHelp"><span class="Marker">*</span> [% Translate("Help") | html %]:</label>
-                        <div class="Field">
-                            <input type="text" name="MetricHelp" id="MetricHelp" class="W50pc" value="[% Data.MetricHelp | html %]">
-                        </div>
-                        <div class="Clear"></div>
-
-                        <label class="Mandatory" for="MetricType"><span class="Marker">*</span>[% Translate("Metric type") | html %]:</label>
-                        <div class="Field">
-                            [% Data.MetricTypeStrg %]
-                        </div>
-                        <div class="Clear"></div>
-
-                        <label for="MetricLabels">[% Translate("Labels") | html %]:</label>
-                        <div class="Field">
-                            <input type="text" name="MetricLabels" id="MetricLabels" class="W50pc" value="[% Data.MetricLabels | html %]">
-                        </div>
-                        <div class="Clear"></div>
-
-                        <label for="MetricBuckets">[% Translate("Buckets") | html %]:</label>
-                        <div class="Field">
-                            <input type="text" name="MetricBuckets" id="MetricBuckets" class="W50pc" value="[% Data.MetricBuckets | html %]">
-                        </div>
-                        <div class="Clear"></div>
-
-                        <label for="SQL">[% Translate("Cron SQL") | html %]:</label>
-                        <div class="Field">
-                            <textarea name="SQL" id="SQL" rows="3" class="W75pc">[% Data.SQL | html %]</textarea>
-                        </div>
-                        <div class="Clear"></div>
-
-                        <label for="UpdateMethod">[% Translate("Update method") | html %]:</label>
-                        <div class="Field">
-                            [% Data.UpdateMethods %]
-                        </div>
-                        <div class="Clear"></div>
-
-                        <div class="Field SpacingTop">
-                            <button class="Primary CallForAction" type="submit" id="Run" value="[% Translate("Create metric") | html %]"><span>[% Translate("Create metric") | html %]</span></button>
-                        </div>
-
-                    </fieldset>
-                </form>
-            </div>
-        </div>
         <div class="WidgetSimple">
             <div class="Header">
                 <h2>[% Translate("Custom metrics") | html %]</h2>
@@ -132,7 +65,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        [% UNLESS Data.CustomMetrics %]
+                        [% UNLESS Data.CustomMetrics.0 %]
                         <tr>
                             <td colspan="8">
                                 [% Translate("No data found.") | html %]

@@ -38,7 +38,14 @@ sub Run {
         return $LayoutObject->SecureMode();
     }
 
-    if ( $Self->{Subaction} eq 'CreateMetric' ) {
+    
+    if( $Self->{Subaction} eq 'CreateMetric' ) {
+        my $Output = $Self->_RenderCreateCustomMetricPage(%Param);
+
+        return $Output;
+    }
+
+    elsif ( $Self->{Subaction} eq 'CreateMetricAction' ) {
         my %Errors;
 
         $LayoutObject->ChallengeTokenCheck();
@@ -55,7 +62,6 @@ sub Run {
         # Check required params
         for my $Parameter (qw( MetricName MetricHelp MetricType )) {
             if (!$Param{$Parameter}) {
-                $Errors{ErrorType} = $Parameter.'Required';
                 $Errors{ErrorMessage} = 'One or more required fields are empty!';
                 last;
             }
@@ -63,56 +69,24 @@ sub Run {
 
         if ($Param{SQL}) {
             if( uc($Param{SQL}) !~ m{ \A \s* (?:SELECT|SHOW|DESC) }smx ) {
-                $Errors{ErrorType}  = 'SQLIsNotSelect';
                 $Errors{ErrorMessage} = 'Only SELECT statements are available here!';
             }
         }
 
-        #TODO: types and update methods we should take from database via model!
-        $Param{MetricTypeStrg} = $LayoutObject->BuildSelection(
-            Name  => 'MetricType',
-            Data  => [qw( counter gauge histogram summary )],
-            Class => 'Modernize',
-            SelectedValue => $Param{MetricType},
-        );
-
-        $Param{UpdateMethods} = $LayoutObject->BuildSelection(
-            Name  => 'UpdateMethod',
-            Data  => [qw( inc dec set observe )],
-            Class => 'Modernize',
-            SelectedValue => $Param{UpdateMethod},
-        );
-
-        $Param{CustomMetrics} = $MetricManager->AllCustomMetricsInfoGet();
-        for my $Metric (@{ $Param{CustomMetrics} }) {
-            $Metric->{Labels} = join ', ', @{ $Metric->{Labels} };
-            $Metric->{Buckets} = join ', ', @{ $Metric->{Buckets} };
-        }
-
         if (!%Errors) {
-
             my $TestMetricSuccess = $MetricManager->TryMetric(%Param);
 
             if ($TestMetricSuccess) {
                 my $CreateMetricSuccess = $MetricManager->NewCustomMetric(%Param);
 
                 if ($CreateMetricSuccess) {
+                    $Param{NotifyMessage} = "Metric $Param{MetricName} successfully created!";
 
-                    my $Output = $LayoutObject->Header();
-                    $Output .= $LayoutObject->NavigationBar();
-                    $Output .= $LayoutObject->Notify(
-                        Info => "Metric $Param{MetricName} successfully created!",
-                    );
-                    $Output .= $LayoutObject->Output(
-                        TemplateFile => 'AdminPrometheus',
-                        Data         => \%Param,
-                    );
-                    $Output .= $LayoutObject->Footer();
+                    my $Output = $Self->_RenderCustomMetricsListPage(%Param);
 
                     return $Output;
                 }
 
-                $Errors{ErrorType} = 'PutMetricError';
                 $Errors{ErrorMessage} = $Kernel::OM->Get('Kernel::System::Log')->GetLogEntry(
                     Type     => 'Error',
                     What     => 'Message',
@@ -120,7 +94,6 @@ sub Run {
             }
 
             else {
-                $Errors{ErrorType} = 'CheckMetricError';
                 $Errors{ErrorMessage} = $Kernel::OM->Get('Kernel::System::Log')->GetLogEntry(
                     Type => 'Error',
                     What => 'Message',
@@ -129,22 +102,10 @@ sub Run {
         }
 
         # Print page with errors info
-        $LayoutObject->Block( Name => $Errors{ErrorType} . 'ServerError' );
+        $Param{NotifyMessage} = $Errors{ErrorMessage};
+        $Param{NotifyPriority} = 'Error';
 
-        my $Output = $LayoutObject->Header;
-        $Output .= $LayoutObject->NavigationBar;
-        $Output .= $LayoutObject->Notify(
-            Info => $Errors{ErrorMessage},
-            Priority => 'Error',
-        );
-        $Output .= $LayoutObject->Output(
-            TemplateFile => 'AdminPrometheus',
-            Data => {
-                %Param,
-                %Errors,
-            },
-        );
-        $Output .= $LayoutObject->Footer();
+        my $Output = $Self->_RenderCreateCustomMetricPage(%Param);
 
         return $Output;
     }
@@ -153,8 +114,6 @@ sub Run {
         $Param{MetricID} = $ParamObject->GetParam( Param => 'ID' );
 
         my $MetricInfo = $MetricManager->CustomMetricGet( MetricID => $Param{MetricID} );
-        use Data::Dumper;
-        warn Dumper $MetricInfo;
         $Param{MetricNamespace} = $MetricInfo->{Namespace};
         $Param{MetricName} = $MetricInfo->{Name};
         $Param{MetricHelp} = $MetricInfo->{Help};
@@ -162,27 +121,7 @@ sub Run {
         $Param{MetricLabels} = join ' ', @{ $MetricInfo->{Labels} };
         $Param{MetricBuckets} = join ' ', @{ $MetricInfo->{Buckets} };
 
-        $Param{MetricTypeStrg} = $LayoutObject->BuildSelection(
-            Name          => 'MetricType',
-            Data          => [qw( counter gauge histogram summary )],
-            Class         => 'Modernize',
-            SelectedValue => $MetricInfo->{Type},
-        );
-
-        $Param{UpdateMethods} = $LayoutObject->BuildSelection(
-            Name  => 'UpdateMethod',
-            Data  => [qw( inc dec set observe )],
-            Class => 'Modernize',
-            SelectedValue => $MetricInfo->{UpdateMethod},
-        );
-
-        my $Output = $LayoutObject->Header();
-        $Output .= $LayoutObject->NavigationBar();
-        $Output .= $LayoutObject->Output(
-            TemplateFile => 'AdminPrometheusChangeMetric',
-            Data         => \%Param,
-        );
-        $Output .= $LayoutObject->Footer();
+        my $Output = $Self->_RenderChangeCustomMetricPage(%Param);
 
         return $Output;
     }
@@ -204,7 +143,6 @@ sub Run {
         # Check required params
         for my $Parameter (qw( MetricName MetricHelp MetricType )) {
             if (!$Param{$Parameter}) {
-                $Errors{ErrorType} = $Parameter.'Required';
                 $Errors{ErrorMessage} = 'One or more required fields are empty!';
                 last;
             }
@@ -212,25 +150,9 @@ sub Run {
 
         if ($Param{SQL}) {
             if( uc($Param{SQL}) !~ m{ \A \s* (?:SELECT|SHOW|DESC) }smx ) {
-                $Errors{ErrorType}  = 'SQLIsNotSelect';
                 $Errors{ErrorMessage} = 'Only SELECT statements are available here!';
             }
         }
-
-        #TODO: types and update methods we should take from database via model!
-        $Param{MetricTypeStrg} = $LayoutObject->BuildSelection(
-            Name  => 'MetricType',
-            Data  => [qw( counter gauge histogram summary )],
-            Class => 'Modernize',
-            SelectedValue => $Param{MetricType},
-        );
-
-        $Param{UpdateMethods} = $LayoutObject->BuildSelection(
-            Name  => 'UpdateMethod',
-            Data  => [qw( inc dec set observe )],
-            Class => 'Modernize',
-            SelectedValue => $Param{UpdateMethod},
-        );
 
         if ( !%Errors ) {
             my $TestMetricSuccess = $MetricManager->TryMetric(%Param);
@@ -239,29 +161,20 @@ sub Run {
                 my $UpdateMetricSuccess = $MetricManager->UpdateCustomMetricAllProps(%Param);
 
                 if ($UpdateMetricSuccess) {
+                    $Param{NotifyMessage} = 'Metric Successfully changed!';
 
-                    my $Output = $LayoutObject->Header();
-                    $Output .= $LayoutObject->NavigationBar();
-                    $Output .= $LayoutObject->Notify(
-                        Info => "Metric successfully changed!"
-                    );
-                    $Output .= $LayoutObject->Output(
-                        TemplateFile => 'AdminPrometheusChangeMetric',
-                        Data         => \%Param,
-                    );
-                    $Output .= $LayoutObject->Footer();
+                    my $Output = $Self->_RenderCustomMetricsListPage(%Param);
 
                     return $Output;
                 }
 
-                $Errors{ErrorType} = 'ChangeMetricError';
                 $Errors{ErrorMessage} = $Kernel::OM->Get('Kernel::System::Log')->GetLogEntry(
                     Type => 'Error',
                     What => 'Message',
                 );
             }
+
             else {
-                $Errors{ErrorType} = 'CheckMetricError';
                 $Errors{ErrorMessage} = $Kernel::OM->Get('Kernel::System::Log')->GetLogEntry(
                     Type => 'Error',
                     What => 'Message',
@@ -270,52 +183,147 @@ sub Run {
         }
 
         # Print page with errors info
-        $LayoutObject->Block( Name => $Errors{ErrorType} . 'ServerError' );
+        $Param{NotifyMessage} = $Errors{ErrorMessage};
+        $Param{NotifyPriority} = 'Error';
 
-        my $Output = $LayoutObject->Header();
-        $Output .= $LayoutObject->NavigationBar;
-        $Output .= $LayoutObject->Notify(
-            Info => $Errors{ErrorMessage},
-            Priority => 'Error',
-        );
-        $Output .= $LayoutObject->Output(
-            TemplateFile => 'AdminPrometheusChangeMetric',
-            Data => {
-                %Param,
-                %Errors,
-            },
-        );
-        $Output .= $LayoutObject->Footer();
+        my $Output = $Self->_RenderChangeCustomMetricPage(%Param);
 
         return $Output;
     }
+
+    elsif ( $Self->{Subaction} eq 'DeleteAction' ) { 
+        $Param{MetricID} = $ParamObject->GetParam( Param => 'MetricID' );
+        
+        my $DeleteMetricSuccess = $MetricManager->DeleteMetric( MetricID => $Param{MetricID} );
+ 
+        if ( $DeleteMetricSuccess ) {
+            $Param{NotifyMessage} = 'Metric successfully deleted!';
+
+            my $Output = $Self->_RenderCustomMetricsListPage(%Param);
+
+            return $Output;
+        }
+
+        my $ErrorMessage = $Kernel::OM->Get('Kernel::System::Log')->GetLogEntry(
+            Type => 'Error',
+            What => 'Message',
+        );
+
+        $Param{NotifyMessage} = "An error has occured while deleting metric: $ErrorMessage";
+        $Param{NotifyPriority} = 'error';
+
+        my $Output = $Self->_RenderCustomMetricListPage(%Param);
+
+        return $Output
+    }
+
+    my $Output = $Self->_RenderCustomMetricsListPage;
+
+    return $Output;
+}
+
+sub _RenderCustomMetricsListPage {
+    my ( $Self, %Param ) = @_;
+
+    # get custom metrics list
+    $Param{CustomMetrics} = $Kernel::OM->Get('Kernel::System::Prometheus::MetricManager')->AllCustomMetricsInfoGet();
+    
+    # make labels and buckets string
+    for my $Metric (@{ $Param{CustomMetrics} }) {
+        $Metric->{Labels} = join ' ', @{ $Metric->{Labels} };
+        $Metric->{Buckets} = join ' ', @{ $Metric->{Buckets} };
+    }
+
+    my $LayoutObject = $Kernel::OM->Get('Kernel::Output::HTML::Layout');
+
+    my $Output = $LayoutObject->Header();
+    $Output .= $LayoutObject->NavigationBar();
+    if ( $Param{NotifyMessage} ) {
+        $Output .= $LayoutObject->Notify(
+            Priority => $Param{NotifyPriority},
+            Info     => $Param{NotifyMessage},
+        );
+    }
+    $Output .= $LayoutObject->Output(
+        TemplateFile => 'AdminPrometheus',
+        Data         => \%Param,
+    );
+    $Output .= $LayoutObject->Footer();
+
+    return $Output;
+}
+
+sub _RenderChangeCustomMetricPage {
+    my ( $Self, %Param ) = @_;
+
+    my $LayoutObject = $Kernel::OM->Get('Kernel::Output::HTML::Layout');
 
     #TODO: types and update methods we should take from database via model!
     $Param{MetricTypeStrg} = $LayoutObject->BuildSelection(
         Name  => 'MetricType',
         Data  => [qw( counter gauge histogram summary )],
         Class => 'Modernize',
+        SelectedValue => $Param{MetricType},
     );
 
     $Param{UpdateMethods} = $LayoutObject->BuildSelection(
         Name  => 'UpdateMethod',
         Data  => [qw( inc dec set observe )],
         Class => 'Modernize',
+        SelectedValue => $Param{UpdateMethod},
     );
-
-    $Param{CustomMetrics} = $MetricManager->AllCustomMetricsInfoGet();
-    for my $Metric (@{ $Param{CustomMetrics} }) {
-        $Metric->{Labels} = join ', ', @{ $Metric->{Labels} };
-        $Metric->{Buckets} = join ', ', @{ $Metric->{Buckets} };
-    }
 
     my $Output = $LayoutObject->Header();
-    $Output .= $LayoutObject->NavigationBar();
+    $Output .= $LayoutObject->NavigationBar;
+    if ($Param{NotifyMessage}) {
+        $Output .= $LayoutObject->Notify(
+            Priority => $Param{NotifyPriority},
+            Info     => $Param{NotifyMessage},
+        );
+    }
     $Output .= $LayoutObject->Output(
-        TemplateFile => 'AdminPrometheus',
-        Data         => \%Param,
+        TemplateFile => 'AdminPrometheusChangeMetric',
+        Data     => \%Param,
     );
+
     $Output .= $LayoutObject->Footer();
+
+    return $Output;
+}
+
+sub _RenderCreateCustomMetricPage {
+    my ( $Self, %Param ) = @_;
+    
+    my $LayoutObject = $Kernel::OM->Get('Kernel::Output::HTML::Layout');
+
+    #TODO: types and update methods we should take from database via model!
+    $Param{MetricTypeStrg} = $LayoutObject->BuildSelection(
+        Name  => 'MetricType',
+        Data  => [qw( counter gauge histogram summary )],
+        Class => 'Modernize',
+        SelectedValue => $Param{MetricType},
+    );
+
+    $Param{UpdateMethods} = $LayoutObject->BuildSelection(
+        Name  => 'UpdateMethod',
+        Data  => [qw( inc dec set observe )],
+        Class => 'Modernize',
+        SelectedValue => $Param{UpdateMethod},
+    );
+
+    my $Output = $LayoutObject->Header();
+    $Output .= $LayoutObject->NavigationBar;
+    if ($Param{NotifyMessage}) {
+        $Output .= $LayoutObject->Notify(
+            Priority => $Param{NotifyPriority},
+            Info     => $Param{NotifyMessage}, 
+        ) 
+    }
+    $Output .= $LayoutObject->Output(
+        TemplateFile => 'AdminPrometheusCreateMetric',
+        Data     => \%Param,
+    );
+    $Output .= $LayoutObject->Footer;
 
     return $Output;
 }
