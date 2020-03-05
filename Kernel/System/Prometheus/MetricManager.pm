@@ -1,4 +1,3 @@
-#--
 #Copyright (C) 2001-2020 OTRS AG, https://otrs.com/
 #--
 #This software comes with ABSOLUTELY NO WARRANTY. For details, see
@@ -424,10 +423,10 @@ sub UpdateMethodsGet {
 sub CustomMetricGet {
     my ( $Self, %Param ) = @_;
 
-    if (!$Param{MetricName}) {
+    unless ( $Param{MetricName} || $Param{MetricID} ) {
         $Kernel::OM->Get('Kernel::System::Log')->Log(
             Priority => 'Error',
-            Message  => 'Need metric name!',
+            Message  => 'Need metric name or ID!',
         );
 
         return;
@@ -435,14 +434,26 @@ sub CustomMetricGet {
 
     my $DBObject = $Kernel::OM->Get('Kernel::System::DB');
 
+    if (!$Param{MetricID}) {
+        return if !$DBObject->Prepare(
+            SQL   => 'SELECT metr.id FROM prometheus_custom_metrics metr WHERE metr.name = ?',
+            Bind  => [\$Param{MetricName}],
+            Limit => 1,
+        );
+
+        while ( my @Row = $DBObject->FetchrowArray ) {
+            $Param{MetricID} = $Row[0];
+        }
+    }
+
     return if !$DBObject->Prepare(
         SQL   => 'SELECT metr.id, metr.namespace, metr.name, metr.help, types.type_name, sqls.query_text, methods.name
                   FROM prometheus_custom_metrics metr
                   JOIN prometheus_metric_types types ON metr.metric_type_id = types.id
-                  JOIN prometheus_custom_metric_sql sqls ON metr.id = sqls.custom_metric_id
-                  JOIN prometheus_metric_update_methods methods ON sqls.update_method_id = methods.id,
-                  WHERE metr.name = ?',
-        Bind  => [ \$Param{MetricName} ],
+                  LEFT JOIN prometheus_custom_metric_sql sqls ON metr.id = sqls.custom_metric_id
+                  LEFT JOIN prometheus_metric_update_methods methods ON sqls.update_method_id = methods.id
+                  WHERE metr.id = ?',
+        Bind  => [\$Param{MetricID}],
         Limit => 1,
     );
 
@@ -458,6 +469,8 @@ sub CustomMetricGet {
             UpdateMethod => $Row[6],
         );
     }
+
+    return if !%CustomMetric;
 
     # get labels info
     return if !$DBObject->Prepare(
@@ -507,7 +520,7 @@ sub NewCustomMetric {
         }
     }
 
-    if ( $Self->CustomMetricGet( MetricName => $Param{MetricName} )->{Id} ) {
+    if ( eval { $Self->CustomMetricGet( MetricName => $Param{MetricName} )->{Id} } ) {
         $Kernel::OM->Get('Kernel::System::Log')->Log(
             Priority => 'Error',
             Message  => 'Metric with this name already exists!',
@@ -595,6 +608,284 @@ sub NewCustomMetric {
     }
 
     return 1;
+}
+
+sub UpdateCustomMetricAllProps {
+    my ( $Self, %Param ) = @_;
+
+    # check required params
+    for my $RequiredParameter (qw( MetricID MetricName MetricHelp MetricType )) {
+        if ( !$Param{ $RequiredParameter } ) {
+            $Kernel::OM->Get('Kernel::System::Log')->Log(
+                Priority => 'Error',
+                Message  => "Need $RequiredParameter",
+            );
+
+            return;
+        }
+    }
+    
+    # get metric_type_id
+    my $MetricTypes = $Self->MetricTypesGet;
+    $Param{MetricTypeID} = $MetricTypes->{ lc $Param{MetricType} };
+
+    use Data::Dumper;
+    warn Dumper \%Param;
+
+    # update custom_metrics table
+    my $DBObject = $Kernel::OM->Get('Kernel::System::DB');
+    return if !$DBObject->Do(
+        SQL  => 'UPDATE prometheus_custom_metrics SET namespace = ?, name = ?, help = ?, metric_type_id = ?
+                 WHERE id = ?',
+        Bind => [\@Param{qw( MetricNamespace MetricName MetricHelp MetricTypeID MetricID )}],
+    );
+
+    # update prometheus_custom_metric_sql
+    
+    # delete previous sql if exists
+    return if !$DBObject->Do(
+        SQL  => 'DELETE FROM prometheus_custom_metric_sql WHERE custom_metric_id = ?',
+        Bind => [\$Param{MetricID}],
+    );
+    # insert new value if exists
+    if ( $Param{SQL} ) {
+        if ( !$Param{UpdateMethod} ) {
+            $Kernel::OM->Get('Kernel::System::Log')->Log(
+                Priority => 'Error',
+                Message  => 'Need UpdateMethod to insert SQL query!',
+            );
+
+            return;
+        }
+
+        # get update method id
+        my $UpdateMethods = $Self->UpdateMethodsGet( MetricType => $Param{MetricType} );
+        $Param{UpdateMethodID} = $UpdateMethods->{ lc $Param{UpdateMethod} };
+
+        # insert new sql
+        return if !$DBObject->Do(
+            SQL  => 'INSERT INTO prometheus_custom_metric_sql( query_text, custom_metric_id, update_method_id )
+                     VALUES ( ?, ?, ? )',
+            Bind => [\( @Param{qw( SQL MetricID UpdateMethodID )} )],
+        );
+    }
+
+    # split buckets and labels if not array
+    for my $ComplexParameter (qw( MetricLabels MetricBuckets )) {
+        if ( ref $Param{ $ComplexParameter } ne 'ARRAY' ) {
+            $Param{ $ComplexParameter }  = [ split /[, ]+/, $Param{ $ComplexParameter } ];
+        }
+    }
+
+    # update prometheus_custom_metric_buckets
+
+    # delete previous buckets
+    return if !$DBObject->Do(
+        SQL  => 'DELETE FROM prometheus_custom_metric_buckets WHERE custom_metric_id = ?',
+        Bind => [ \$Param{MetricID} ],
+    );
+    
+    # insert new buckets
+    for my $Bucket (@{ $Param{MetricBuckets} }) {
+        return if !$DBObject->Do(
+            SQL  => 'INSERT INTO prometheus_custom_metric_buckets( custom_metric_id, value )
+                     VALUES ( ?, ? )',
+            Bind => [ \$Param{MetricID}, \$Bucket ],
+        );
+    }
+
+    # update prometheus_custom_metric_labels
+
+    # delete previous labels
+    return if !$DBObject->Do(
+        SQL  => 'DELETE FROM prometheus_custom_metric_labels WHERE custom_metric_id = ?',
+        Bind => [ \$Param{MetricID} ],
+    );
+
+    # insert new labels
+    my $QueueNum = 0;
+    for my $Label (@{ $Param{MetricLabels} }) {
+        return if !$DBObject->Do(
+            SQL  => 'INSERT INTO prometheus_custom_metric_labels(name, custom_metric_id, queue_num)
+                     VALUES ( ?, ?, ? )',
+            Bind => [\( $Label, $Param{MetricID}, $QueueNum )],
+        );
+        $QueueNum++;
+    }
+
+    return 1;
+}
+
+sub UpdateCustomMetricNamespace {
+    my ( $Self, %Param ) = @_;
+
+    unless ( $Param{MetricNamespace} && $Param{MetricID} ) {
+        $Kernel::OM->Get('Kernel::System::Log')->Log(
+            Priority => 'error',
+            Message  => 'Need MetricNamespace or MetricID !',
+        );
+
+        return;
+    }
+
+    return if !$Kernel::OM->Get('Kernel::System::DB')->Do(
+        SQL  => 'UPDATE prometheus_custom_metrics SET namespace = ? WHERE id = ?',
+        Bind => [\(@Param{qw( MetricNamespace MetricID )})],
+    );
+
+    return 1;
+}
+
+sub UpdateCustomMetricName {
+    my ( $Self, %Param ) = @_;
+
+    unless ( $Param{MetricName} && $Param{MetricID} ) {
+        $Kernel::OM->Get('Kernel::System::Log')->Log(
+            Priority => 'error',
+            Message  => 'Need MetricName or MetricID !',
+        );
+        
+        return;
+    }
+
+    if ( eval { $Self->CustomMetricGet->{Id} } ) {
+        $Kernel::OM->Get('Kernel::System::Log')->Log(
+            Priority => 'error',
+            Message  => 'Metric with this name already exists',
+        );
+    }
+
+    return if !$Kernel::OM->Get('Kernel::System::DB')->Do(
+        SQL  => 'UPDATE prometheus_custom_metrics SET name = ? WHERE id = ?',
+        Bind => [\(@Param{qw( MetricName MetricID )})],
+    );
+
+    return 1;
+}
+
+sub UpdateCustomMetricHelp {
+    my ( $Self, %Param ) = @_;
+
+    unless ( $Param{MetricHelp} && $Param{MetricID} ) {
+        $Kernel::OM->Get('Kernel::System::Log')->Log(
+            Priority => 'error',
+            Message  => 'Need MetricHelp or MetricID !',
+        );
+
+        return;
+    }
+
+    return if !$Kernel::OM->Get('Kernel::System::DB')->Do(
+        SQL  => 'UPDATE prometheus_custom_metrics SET help = ? where id =?',
+        Bind => [\(@Param{qw( MetricHelp MetricID )})],
+    );
+
+    return 1;
+}
+
+sub UpdateCustomMetricType {
+    my ( $Self, %Param ) = @_;
+
+    unless ( $Param{MetricType} && $Param{MetricID} ) {
+        $Kernel::OM->Get('Kernel::System::Log')->Log(
+            Priority => 'error',
+            Message  => 'Need MetricType of MetricID',
+        );
+
+        return;
+    }
+    
+    my $MetricTypes = $Self->MetricTypesGet;
+
+    $Param{MetricTypeID} = $MetricTypes->{ $Param{MetricType} };
+
+    if (!$Param{MetricTypeID}) {
+        $Kernel::OM->Get('Kernel::System::Log')->Log(
+            Priority => 'error',
+            Message  => 'Wrong MetricType!',
+        );
+
+        return;
+    }
+
+    return if !$Kernel::OM->Get('Kernel::System::DB')->Do(
+        SQL  => 'UPDATE prometheus_custom_metrics SET metric_type_id = ? WHERE id = ?',
+        Bind => [\(@Param{qw( MetricTypeID MetricID )})],
+    );
+
+    return 1;
+}
+
+sub UpdateCustomMetricSQL {
+    my ( $Self, %Param ) = @_;
+
+    unless ( $Param{SQL} && $Param{MetricID} ) {
+        $Kernel::OM->Get('Kernel::System::Log')->Log(
+            Priority => 'error',
+            Message  => 'Need SQL or MetricID !',
+        );
+
+        return;
+    }
+
+    return if !$Kernel::OM->Get('Kernel::System::DB')->Do(
+        SQL  => 'UPDATE prometheus_custom_metric_sql SET query_text = ? WHERE custom_metric_id = ?',
+        Bind => [\(@Param{qw( SQL MetricID )})],
+    );
+
+    return 1;
+}
+
+sub UpdateCustomMetricUpdateMethod {
+    my ( $Self, %Param ) = @_;
+
+    unless ( $Param{MetricType} && $Param{UpdateMethod} && $Param{MetricID} ) {
+        $Kernel::OM->Get('Kernel::System::Log')->Log(
+            Priority => 'error',
+            Message  => 'Need UpdateMethod or MetricID',
+        );
+
+        return;
+    }
+
+    my $UpdateMethods = $Self->UpdateMethodsGet;
+    $Param{UpdateMethodID} = $UpdateMethods->{ $Param{MetricType} };
+    if (!$Param{UpdateMethodID}) {
+        $Kernel::OM->Get('Kernel:System::Log')->Log(
+            Priority => 'error',
+            Message  => 'Wrong MetricType or UpdateMethod!',
+        );
+
+        return;
+    }
+
+    return if !$Kernel::OM->Get('Kernel::System::DB')->Do(
+        SQL  => 'UPDATE prometheus_custom_metric_sql SET update_method_id = ? WHERE custom_metric_id = ?',
+        Bind => [\(@Param{qw( UpdateMethodID MetricID )})],
+    );
+
+    return 1;
+}
+
+sub UpdateCustomMetricLabels {
+    my ( $Self, %Param ) = @_;
+
+    unless ( $Param{MetricID} && $Param{MetricLabels} ) {
+        $Kernel::OM->Get('Kernel::System::Log')->Log(
+            Priority => 'error',
+            Message  => 'Need MetricID or MetricLabels!',
+        );
+
+        return;
+    }
+
+    if ( ref $Param{MetricLabels} ne 'ARRAY' ) {
+        $Param{MetricLabels} = [ split /[, ]+/, $Param{MetricLabels} ];
+    }
+
+    
+    #TODO: Дописать
+    ...
 }
 
 1
