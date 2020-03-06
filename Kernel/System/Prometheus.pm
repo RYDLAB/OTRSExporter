@@ -15,6 +15,7 @@ use Net::Prometheus::ProcessCollector::linux;
 
 use Kernel::System::VariableCheck qw( IsArrayRefWithData IsHashRefWithData );
 use Proc::Find qw(find_proc);
+use List::Util qw(any);
 
 our @ObjectDependencies = (
     'Kernel::System::Prometheus::MetricManager',
@@ -41,7 +42,7 @@ sub new {
             DestroyFlag => 0,
         }
     );
-
+    
     if (!$Self->{PrometheusObject}) {
         $Kernel::OM->Get('Kernel::System::Log')->Log(
             Priority => 'error',
@@ -312,6 +313,46 @@ sub UpdateCustomSQLMetrics {
 
             return 1;
         },
+    );
+
+    return 1;
+}
+
+sub IsAllCustomMetricsCreated {
+    my ( $Self, %Param ) = @_;
+    
+    my $MetricManager = $Kernel::OM->Get('Kernel::System::Prometheus::MetricManager');
+
+    my $CustomMetricNames = $MetricManager->AllCustomMetricsNamesGet;
+    
+    my @CreatedMetricNames = keys %{ $Self->{Guard}->Fetch };
+
+    for my $CustomMetricName ( @$CustomMetricNames ) {
+        return unless any { $_ eq $CustomMetricName } @CreatedMetricNames;
+    }
+
+    return 1;
+}
+
+sub MergeCustomMetrics {
+    my $Self = shift;
+
+    my $MetricManager = $Kernel::OM->Get('Kernel::System::Prometheus::MetricManager');
+
+    return if !$MetricManager->IsCustomMetricsEnabled;
+
+    my $CustomMetrics = $MetricManager->CreateCustomMetrics;
+
+    $Self->Change(
+        Callback => sub {
+            my $Metrics = shift;
+            
+            for my $CustomMetricName (keys %$CustomMetrics) {
+                $Metrics->{ $CustomMetricName } = $CustomMetrics->{ $CustomMetricName };
+            }
+
+            return 1;
+        }
     );
 
     return 1;

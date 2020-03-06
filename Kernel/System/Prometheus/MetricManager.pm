@@ -62,7 +62,7 @@ sub TryMetric {
     my $CreatingMethod = 'new_' . lc $Param{MetricType};
 
     for my $ComplexParameter (qw( MetricLabels MetricBuckets )) {
-        if (!ref $Param{$ComplexParameter}) {
+        if ( ref $Param{$ComplexParameter} ne 'ARRAY' ) {
             $Param{$ComplexParameter} = [ split /[\W]+/, $Param{$ComplexParameter} ];
         }
     }
@@ -174,6 +174,29 @@ sub CreateDefaultMetrics {
     return $Metrics;
 }
 
+sub GetLabelsFromSQL {
+    my ( $Self, %Param ) = @_;
+
+    if ( !$Param{SQL} ) {
+        $Kernel::OM->Get('Kernel::System::Log')->Log(
+            Priority => 'Error',
+            Message  => 'Need SQL!',
+        );
+
+        return;
+    }
+
+    my $DBObject = $Kernel::OM->Get('Kernel::System::DB');
+    return if !$DBObject->Prepare( SQL => $Param{SQL} );
+
+    my @Labels = $DBObject->GetColumnNames;
+
+    # Pop last column ( it is value column )
+    pop @Labels;
+
+    return \@Labels;
+}
+
 sub _GetDefaultMetricsConstructors {
     my $Self = shift;
 
@@ -240,6 +263,14 @@ sub _GetDefaultMetricsConstructors {
             );
         },
 
+        OTRSLogsTotal => sub {
+            $OTRSMetricGroup->new_inc(
+                name   => 'logs_total',
+                help   => 'The number of the logs',
+                labels => [qw( host priority )],
+            );
+        },
+
         CacheOperations => sub {
             $MetricCreator->new_counter(
                 namespace => 'cache',
@@ -285,6 +316,22 @@ sub MetricTypesGet {
     }
 
     return \%Types;
+}
+
+sub AllCustomMetricsNamesGet {
+    my ( $Self, %Param ) = @_;
+
+    my $DBObject = $Kernel::OM->Get('Kernel::System::DB');
+
+    return if !$DBObject->Prepare(SQL => 'SELECT name FROM prometheus_custom_metrics');
+
+    my @Names;
+
+    while ( my @Row = $DBObject->FetchrowArray ) {
+        push @Names, $Row[0];
+    }
+
+    return \@Names;
 }
 
 sub AllCustomMetricsInfoGet {
@@ -628,9 +675,6 @@ sub UpdateCustomMetricAllProps {
     # get metric_type_id
     my $MetricTypes = $Self->MetricTypesGet;
     $Param{MetricTypeID} = $MetricTypes->{ lc $Param{MetricType} };
-
-    use Data::Dumper;
-    warn Dumper \%Param;
 
     # update custom_metrics table
     my $DBObject = $Kernel::OM->Get('Kernel::System::DB');

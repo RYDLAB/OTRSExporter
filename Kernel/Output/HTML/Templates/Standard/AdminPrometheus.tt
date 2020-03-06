@@ -29,6 +29,30 @@
                     <li>
                         <a href="[% Env("Baselink") %]Action=[% Env("Action") %];Subaction=CreateMetric;Nav=[% Data.Nav | uri %]" class="CallForAction Fullsize Center"><span><i class="fa fa-plus-square"></i>[% Translate("Add new metric") | html %]</span></a>
                     </li>
+                    <li>
+                        <form action="[% Env("CGIHandle") %]" method="post">
+                            <input type="hidden" name="Action" value="[% Env("Action") %]" />
+                            <input type="hidden" name="Subaction" value="DeployMetrics"/>
+                            
+                            <button class="CallForAction Fullsize Center" type="submit">
+                                <span>
+                                    [% Translate("Deploy metrics") | html %]
+                                </span>
+                            </button>
+                        </form>
+                    </li>
+                    <li>
+                        <form action="[% Env("CGIHandle") %]" method="post">
+                            <input type="hidden" name="Action" value="[% Env("Action") %]"/>
+                            <input type="hidden" name="Subaction" value="ClearMemory"/>
+
+                            <button class="CallForAction Fullsize Center" type="submit">
+                                <span><i class="fa fa-trash-o"></i>
+                                    [% Translate("Clear shared memory") | html %]
+                                </span>
+                            </button>
+                        </form>
+                    </li>
                 </ul>
             </div>
         </div>
@@ -40,6 +64,7 @@
                 <p class="FieldExplanation">
                     [% Translate("Here you can see table with created custom metrics. Also you can edit them or create new") %]
                 </p>
+
             </div>
         </div>
 

@@ -25,7 +25,6 @@ sub new {
     return $Self;
 }
 
-# TODO for each subaction write function
 sub Run {
     my ( $Self, %Param ) = @_;
 
@@ -38,7 +37,10 @@ sub Run {
         return $LayoutObject->SecureMode();
     }
 
-    
+    if ( !$Kernel::OM->Get('Kernel::System::Prometheus')->IsAllCustomMetricsCreated ) {
+        $Param{NotifyMessage} = 'Not all custom metrics are deployed! Please deploy them';
+    }
+ 
     if( $Self->{Subaction} eq 'CreateMetric' ) {
         my $Output = $Self->_RenderCreateCustomMetricPage(%Param);
 
@@ -53,25 +55,25 @@ sub Run {
         # get params
         for my $Parameter (
             qw( MetricNamespace MetricName MetricHelp MetricType
-                MetricLabels MetricBuckets SQL UpdateMethod )
+                MetricBuckets SQL UpdateMethod )
             )
         {
             $Param{$Parameter} = $ParamObject->GetParam( Param => $Parameter ) || '';
         }
 
         # Check required params
-        for my $Parameter (qw( MetricName MetricHelp MetricType )) {
+        for my $Parameter (qw( MetricName MetricHelp MetricType SQL UpdateMethod )) {
             if (!$Param{$Parameter}) {
                 $Errors{ErrorMessage} = 'One or more required fields are empty!';
                 last;
             }
         }
 
-        if ($Param{SQL}) {
-            if( uc($Param{SQL}) !~ m{ \A \s* (?:SELECT|SHOW|DESC) }smx ) {
-                $Errors{ErrorMessage} = 'Only SELECT statements are available here!';
-            }
+        if( uc($Param{SQL}) !~ m{ \A \s* (?:SELECT|SHOW|DESC) }smx ) {
+            $Errors{ErrorMessage} = 'Only SELECT statements are available here!';
         }
+
+        $Param{MetricLabels} = $MetricManager->GetLabelsFromSQL( SQL => $Param{SQL} );
 
         if (!%Errors) {
             my $TestMetricSuccess = $MetricManager->TryMetric(%Param);
@@ -134,7 +136,7 @@ sub Run {
         # get params
         for my $Parameter (
             qw( MetricID MetricNamespace MetricName MetricHelp MetricType
-                MetricLabels MetricBuckets SQL UpdateMethod )
+                MetricBuckets SQL UpdateMethod )
             )
         {
             $Param{$Parameter} = $ParamObject->GetParam( Param => $Parameter ) || '';
@@ -148,11 +150,11 @@ sub Run {
             }
         }
 
-        if ($Param{SQL}) {
-            if( uc($Param{SQL}) !~ m{ \A \s* (?:SELECT|SHOW|DESC) }smx ) {
-                $Errors{ErrorMessage} = 'Only SELECT statements are available here!';
-            }
+        if( uc($Param{SQL}) !~ m{ \A \s* (?:SELECT|SHOW|DESC) }smx ) {
+            $Errors{ErrorMessage} = 'Only SELECT statements are available here!';
         }
+
+        $Param{MetricLabels} = $MetricManager->GetLabelsFromSQL( SQL => $Param{SQL} );
 
         if ( !%Errors ) {
             my $TestMetricSuccess = $MetricManager->TryMetric(%Param);
@@ -217,7 +219,55 @@ sub Run {
         return $Output
     }
 
-    my $Output = $Self->_RenderCustomMetricsListPage;
+    elsif ( $Self->{Subaction} eq 'DeployMetrics' ) {
+        my $MergeSuccess = $Kernel::OM->Get('Kernel::System::Prometheus')->MergeCustomMetrics;
+
+        if ($MergeSuccess) {
+            $Param{NotifyMessage} = 'Metrics successfully deployed!';
+
+            my $Output = $Self->_RenderCustomMetricsListPage( NotifyMessage => $Param{NotifyMessage} );
+
+            return $Output;
+        }
+
+        my $ErrorMessage = $Kernel::OM->Get('Kernel::System::Log')->GetLogEntry(
+            Type => 'Error',
+            What => 'Message',
+        );
+
+        $Param{NotifyMessage} = "An error has occured while deploying metric: $ErrorMessage";
+        $Param{NotifyPriority} = 'error';
+
+        my $Output = $Self->_RenderCustomMetricsListPage(%Param);
+
+        return $Output;
+    }
+
+    elsif ( $Self->{Subaction} eq 'ClearMemory' ) {
+        my $ClearSuccess = $Kernel::OM->Get('Kernel::System::Prometheus')->ClearMemory;
+
+        if ($ClearSuccess) {
+            $Param{NotifyMessage} = 'Shared memory successfully cleared';
+
+            my $Output = $Self->_RenderCustomMetricsListPage(NotifyMessage => $Param{NotifyMessage});
+
+            return $Output;
+        }
+
+        my $ErrorMessage = $Kernel::OM->Get('Kernel::System::Log')->GetLogEntry(
+            Type => 'Error',
+            What => 'Message',
+        );
+
+        $Param{NotifyMessage} = "An error has occured while clearing shared memory: $ErrorMessage";
+        $Param{NotifyPriority} = 'error';
+
+        my $Output = $Self->_RenderCustomMetricsListPage(%Param);
+        
+        return $Output;
+    }
+
+    my $Output = $Self->_RenderCustomMetricsListPage( NotifyMessage => $Param{NotifyMessage} );
 
     return $Output;
 }

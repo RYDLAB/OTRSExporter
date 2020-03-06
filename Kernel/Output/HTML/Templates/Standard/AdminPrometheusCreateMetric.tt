@@ -42,6 +42,7 @@
                     <p class="FieldExplanation">
                         [% Translate("Where label1 .. labelN are labels in your metric and update_value is value to update metric") | html %]
                     </p>
+                    <p class="FieldExplanation">[% Translate("You can check your SQL query in ") %]<a href="[% Env("Baselink") %]Action=AdminSelectBox">SQL Box</a></p>
                 </div>
             </div>
         </div>
@@ -59,61 +60,7 @@
                     <input type="hidden" name="Action" value="[% Env("Action") %]"/>
                     <input type="hidden" name="Subaction" value="CreateMetricAction"/>
 
-                    <fieldset class="TableLike FixedLabelSmall">
-
-                        <label for="MetricNamespace">[% Translate("Namespace") | html %]:</label>
-                        <div class="Field">
-                            <input type="text" name="MetricNamespace" id="MetricNamespace" class="W50pc" value="[% Data.MetricNamespace | html%]">
-                        </div>
-                        <div class="Clear"></div>
-
-                        <label class="Mandatory" for="MetricName"><span class="Marker">*</span> [% Translate("Name") | html %]:</label>
-                        <div class="Field">
-                            <input type="text" name="MetricName" id="MetricName" class="W50pc" value="[% Data.MetricName | html %]">
-                        </div>
-                        <div class="Clear"></div>
-
-                        <label class="Mandatory" for="MetricHelp"><span class="Marker">*</span> [% Translate("Help") | html %]:</label>
-                        <div class="Field">
-                            <input type="text" name="MetricHelp" id="MetricHelp" class="W50pc" value="[% Data.MetricHelp | html %]">
-                        </div>
-                        <div class="Clear"></div>
-
-                        <label class="Mandatory" for="MetricType"><span class="Marker">*</span>[% Translate("Metric type") | html %]:</label>
-                        <div class="Field">
-                            [% Data.MetricTypeStrg %]
-                        </div>
-                        <div class="Clear"></div>
-
-                        <label for="MetricLabels">[% Translate("Labels") | html %]:</label>
-                        <div class="Field">
-                            <input type="text" name="MetricLabels" id="MetricLabels" class="W50pc" value="[% Data.MetricLabels | html %]">
-                        </div>
-                        <div class="Clear"></div>
-
-                        <label for="MetricBuckets">[% Translate("Buckets") | html %]:</label>
-                        <div class="Field">
-                            <input type="text" name="MetricBuckets" id="MetricBuckets" class="W50pc" value="[% Data.MetricBuckets | html %]">
-                        </div>
-                        <div class="Clear"></div>
-
-                        <label for="SQL">[% Translate("Cron SQL") | html %]:</label>
-                        <div class="Field">
-                            <textarea name="SQL" id="SQL" rows="3" class="W75pc">[% Data.SQL | html %]</textarea>
-                        </div>
-                        <div class="Clear"></div>
-
-                        <label for="UpdateMethod">[% Translate("Update method") | html %]:</label>
-                        <div class="Field">
-                            [% Data.UpdateMethods %]
-                        </div>
-                        <div class="Clear"></div>
-
-                        <div class="Field SpacingTop">
-                            <button class="Primary CallForAction" type="submit" id="Run" value="[% Translate("Create metric") | html %]"><span>[% Translate("Create metric") | html %]</span></button>
-                        </div>
-
-                    </fieldset>
+                    [% INCLUDE MetricForm.tt %]
                 </form>
             </div>
         </div>
