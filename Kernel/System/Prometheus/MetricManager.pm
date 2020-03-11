@@ -167,6 +167,18 @@ sub CreateDefaultMetrics {
     my $Metrics = {};
 
     for my $MetricName (keys %{ $Self->{_EnabledDefaultMetrics} }) {
+        if ($MetricName eq 'DaemonSubworkersMetrics') {
+            $Metrics->{DaemonSubworkersTotal} = $Constructors->{DaemonSubworkersTotal}();
+            $Metrics->{DaemonSubworkersLastExecutionTime} = $Constructors->{DaemonSubworkersLastExecutionTime}();
+            next;
+        }
+
+        elsif ($MetricName eq 'RecurrentTasksMetrics') {
+            $Metrics->{RecurrentTaskDuration} = $Constructors->{RecurrentTaskDuration}();
+            $Metrics->{RecurrentTaskSuccess}  = $Constructors->{RecurrentTaskSuccess}();
+            next;
+        }
+
         next if !$Constructors->{$MetricName};
         $Metrics->{$MetricName} = $Constructors->{$MetricName}();
     }
@@ -264,7 +276,7 @@ sub _GetDefaultMetricsConstructors {
         },
 
         OTRSLogsTotal => sub {
-            $OTRSMetricGroup->new_inc(
+            $OTRSMetricGroup->new_counter(
                 name   => 'logs_total',
                 help   => 'The number of the logs',
                 labels => [qw( host priority )],
@@ -277,6 +289,24 @@ sub _GetDefaultMetricsConstructors {
                 name      => 'operations',
                 help      => 'Number of calls methods to manipulate cache',
                 labels    => [qw( host operation )],
+            );
+        },
+
+        DaemonSubworkersTotal => sub {
+            $MetricCreator->new_counter(
+                namespace => 'daemon_subworkers',
+                name      => 'total',
+                help      => 'Number of workers, executing in Kernel::System::Daemon::DaemonModules::SchedulerTaskWorker',
+                labels    => [qw( host task_handler_module task_name )],
+            );
+        },
+
+        DaemonSubworkersLastExecutionTime => sub {
+            $MetricCreator->new_gauge(
+                namespace => 'daemon_subworkers',
+                name      => 'task_last_execution_time',
+                help      => 'Last execution time for each daemon task',
+                labels    => [qw( host task_handler_module task_name )],
             );
         },
 

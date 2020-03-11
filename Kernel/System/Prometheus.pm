@@ -60,7 +60,6 @@ sub new {
     if ( !$Self->{Guard}->Fetch ) {
 
         $Kernel::OM->Get('Kernel::System::Log')->Log(
-            Priority => 'info',
             Message  => 'Shared memory is empty. Creating new metrics...',
         );
 
@@ -90,12 +89,8 @@ sub RefreshMetrics {
     my $Self = shift;
 
     my $MetricManager = $Kernel::OM->Get('Kernel::System::Prometheus::MetricManager');
-    my $RTDurationEnabled = $MetricManager->IsMetricEnabled('RecurrentTaskDuration');
-    my $RTSuccessEnabled  = $MetricManager->IsMetricEnabled('RecurrentTaskSuccess');
 
-    unless ( $RTDurationEnabled || $RTSuccessEnabled ) {
-        return;
-    }
+    return if !$MetricManager->IsMetricEnabled('RecurrentTasksMetrics');
 
     # Refresh daemon recurrent tasks metrics
     my $RecurrentTasks = [];
@@ -121,28 +116,24 @@ sub RefreshMetrics {
             my $Metrics = shift;
 
             for my $Task (@$RecurrentTasks) {
-                if ($RTDurationEnabled) {
-                    my $WorkerRunningTime = $& if $Task->{LastWorkerRunningTime} =~ /\d/;
+                my $WorkerRunningTime = $& if $Task->{LastWorkerRunningTime} =~ /\d/;
 
-                    $Metrics->{RecurrentTaskDuration}->set(
-                        $Host, $Task->{Name}, $WorkerRunningTime // -1,
-                    );
+                $Metrics->{RecurrentTaskDuration}->set(
+                    $Host, $Task->{Name}, $WorkerRunningTime // -1,
+                );
+
+                my $SuccessResult = -1;
+
+                if ( $Task->{LastWorkerStatus} eq 'Success' ) {
+                    $SuccessResult = 1;
+                }
+                elsif ( $Task->{LastWorkerStatus} eq 'Fail' ) {
+                    $SuccessResult = 0;
                 }
 
-                if ($RTSuccessEnabled) {
-                    my $SuccessResult = -1;
-
-                    if ( $Task->{LastWorkerStatus} eq 'Success' ) {
-                        $SuccessResult = 1;
-                    }
-                    elsif ( $Task->{LastWorkerStatus} eq 'Fail' ) {
-                        $SuccessResult = 0;
-                    }
-
-                    $Metrics->{RecurrentTaskSuccess}->set(
-                        $Host, $Task->{Name}, $SuccessResult,
-                    );
-                }
+                $Metrics->{RecurrentTaskSuccess}->set(
+                    $Host, $Task->{Name}, $SuccessResult,
+                );
             }
 
             return 1;
@@ -160,6 +151,8 @@ sub NewProcessCollector {
             Priority => 'error',
             Message  => 'Didn\'t get PID to collect',
         );
+
+        return 0;
     }
 
     $Self->Change(

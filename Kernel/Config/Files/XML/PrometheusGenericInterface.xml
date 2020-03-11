@@ -55,12 +55,13 @@
                 <Item Key="OTRSOutgoingMailTotal" ValueType="Checkbox">1</Item>
                 <Item Key="OTRSTicketTotal" ValueType="Checkbox">1</Item>
                 <Item Key="OTRSArticleTotal" ValueType="Checkbox">1</Item>
+                <Item Key="OTRSLogsTotal" ValueType="Checkbox">1</Item>
 
                 <Item Key="CacheOperations" ValueType="Checkbox">1</Item>
-                <Item Key="RecurrentTaskDuration" ValueType="Checkbox">1</Item>
-                <Item Key="RecurrentTaskSuccess" ValueType="Checkbox">1</Item>
+                <Item Key="RecurrentTasksMetrics" ValueType="Checkbox">1</Item>
                 <Item Key="HTTPProcessCollector" ValueType="Checkbox">1</Item>
                 <Item Key="DaemonProcessCollector" ValueType="Checkbox">1</Item>
+                <Item Key="DaemonSubworkersMetrics" ValueType="Checkbox">1</Item>
             </Hash>
         </Value>
     </Setting>
