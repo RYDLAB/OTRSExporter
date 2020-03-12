@@ -16,13 +16,15 @@
 
     <label class="Mandatory" for="MetricName"><span class="Marker">*</span> [% Translate("Name") | html %]:</label>
     <div class="Field">
-        <input type="text" name="MetricName" id="MetricName" class="W50pc" value="[% Data.MetricName | html %]">
+        <input type="text" name="MetricName" id="MetricName" class="W50pc Validate_Required" value="[% Data.MetricName | html %]">
+        <div id="MetricNameError" class="TooltipErrorMessage"><p>[% Translate("This field is required") | html %]</p></div>
     </div>
     <div class="Clear"></div>
 
     <label class="Mandatory" for="MetricHelp"><span class="Marker">*</span> [% Translate("Help") | html %]:</label>
     <div class="Field">
-        <input type="text" name="MetricHelp" id="MetricHelp" class="W50pc" value="[% Data.MetricHelp | html %]">
+        <input type="text" name="MetricHelp" id="MetricHelp" class="W50pc Validate_Required" value="[% Data.MetricHelp | html %]">
+        <div id="MetricHelpError" class="TooltipErrorMessage"><p>[% Translate("This field is required") | html %]</p></div>
     </div>
     <div class="Clear"></div>
 
@@ -40,7 +42,13 @@
 
     <label class="Mandatory" for="SQL"><span class="Marker">*</span>[% Translate("Cron SQL") | html %]:</label>
     <div class="Field">
-        <textarea name="SQL" id="SQL" rows="3" class="W75pc">[% Data.SQL | html %]</textarea>
+        <textarea name="SQL" id="SQL" rows="3" class="W75pc Validate_Required [%IF Data.SQLErrorMessage %]ServerError[% END %]">[% Data.SQL | html %]</textarea>
+        <div id="SQLError" class="TooltipErrorMessage"><p>[% Translate("This field is required") | html %]</p></div>
+        [% IF Data.SQLErrorMessage %]
+        <div id="SQLServerError" class="TooltipErrorMessage">
+            <p>[% Translate(Data.SQLErrorMessage) | html %]</p>
+        </div>
+        [% END %]
     </div>
     <div class="Clear"></div>
 

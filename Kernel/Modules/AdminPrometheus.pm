@@ -70,6 +70,7 @@ sub Run {
         }
 
         if( uc($Param{SQL}) !~ m{ \A \s* (?:SELECT|SHOW|DESC) }smx ) {
+            $Param{SQLErrorMessage} = 'Only SELECT statements are available here!';
             $Errors{ErrorMessage} = 'Only SELECT statements are available here!';
         }
 
@@ -143,7 +144,7 @@ sub Run {
         }
 
         # Check required params
-        for my $Parameter (qw( MetricName MetricHelp MetricType )) {
+        for my $Parameter (qw( MetricName MetricHelp MetricType SQL UpdateMethod )) {
             if (!$Param{$Parameter}) {
                 $Errors{ErrorMessage} = 'One or more required fields are empty!';
                 last;
@@ -151,6 +152,7 @@ sub Run {
         }
 
         if( uc($Param{SQL}) !~ m{ \A \s* (?:SELECT|SHOW|DESC) }smx ) {
+            $Param{SQLErrorMessage} = 'Only SELECT statements are available here!';
             $Errors{ErrorMessage} = 'Only SELECT statements are available here!';
         }
 
