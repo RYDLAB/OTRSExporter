@@ -14,7 +14,7 @@ use Net::Prometheus;
 use Net::Prometheus::ProcessCollector::linux;
 
 use Kernel::System::VariableCheck qw( IsArrayRefWithData IsHashRefWithData );
-use Proc::Find qw(find_proc);
+use Proc::ProcessTable;
 use List::Util qw(any);
 
 our @ObjectDependencies = (
@@ -219,10 +219,31 @@ sub UpdateDefaultMetrics {
     }
 
     # Get http processes pids
-    my $ServerPids;
+    my $MainProcPID = 0;
+    my @ChildPIDs;
+
     if ($HTTPProcMetricEnabled) {
         my $ServerCMND = $Self->{Settings}{ServerCMND};
-        $ServerPids = find_proc( cmndline => $ServerCMND );
+
+        my $ProcessTable = Proc::ProcessTable->new();
+
+        # get main proc
+        for my $ProcessObject ( @{ $ProcessTable->table } ) {
+            next if $ProcessObject->{cmndline} ne $ServerCMND;
+            next if $ProcessObject->{pgrp} != $ProcessObject->{pid};
+
+            $MainProcPID = $ProcessObject->{pid};
+        }
+
+        # get child pids
+        if ($MainProcPID) {
+            for my $ProcessObject ( @{ $ProcessTable->table } ) {
+                next if $ProcessObject->{pgrp} != $MainProcPID;
+                next if $ProcessObject->{pid} == $MainProcPID;
+
+                push @ChildPIDs, $ProcessObject->{pid};
+            }
+        }
     }
 
     # Record info as metrics
@@ -232,14 +253,21 @@ sub UpdateDefaultMetrics {
         Callback => sub {
             my $Metrics = shift;
 
-            if (IsArrayRefWithData($ServerPids)) {
-                for my $PID (@$ServerPids) {
+            if ($MainProcPID) {
+                $Metrics->{"ProcessCollector$MainProcPID"} = Net::Prometheus::ProcessCollector->new(
+                    pid    => $MainProcPID,
+                    labels => [ host => $Host, level => 'parent', worker => $MainProcPID ],
+                    prefix => 'http_process',
+                );
+                
+                for my $PID (@ChildPIDs) {
                     $Metrics->{"ProcessCollector$PID"} = Net::Prometheus::ProcessCollector->new(
                         pid    => $PID,
-                        labels => [ host => $Host, worker => $PID ],
+                        labels => [ host => $Host, level => 'child', worker => $PID ],
                         prefix => 'http_process',
                     );
                 }
+
             }
 
             if (@ArticleInfo) {

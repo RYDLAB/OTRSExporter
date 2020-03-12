@@ -16,7 +16,10 @@ CREATE TABLE prometheus_metric_update_methods (
 );
 
 INSERT INTO prometheus_metric_update_methods(metric_type_id, name) VALUES
-    (1, 'inc'), (2, 'inc'), (2, 'set'), (2, 'dec'), (3, 'observe'), (4, 'observe');
+    (1, 'inc'),
+    (2, 'inc'), (2, 'set'), (2, 'dec'),
+    (3, 'observe'),
+    (4, 'observe');
 
 CREATE TABLE prometheus_custom_metrics (
     id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,

@@ -53,14 +53,7 @@ sub Change {
         );
     }
 
-    if (!$Self->LockMemory( LockFlag => LOCK_EX|LOCK_NB )) {
-        $Kernel::OM->Get('Kernel::System::Log')->Log(
-            Priority => 'error',
-            Message  => 'Shared memory already locked by another process!!!',
-        );
-
-        return;
-    }
+    return if !$Self->LockMemory( LockFlag => LOCK_EX|LOCK_NB );
 
     my $Data = $Self->Fetch;
 
