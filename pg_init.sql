@@ -12,7 +12,7 @@ INSERT INTO prometheus_metric_types(type_name) VALUES
 CREATE TABLE prometheus_metric_update_methods (
     id             SMALLINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     metric_type_id SMALLINT REFERENCES prometheus_metric_types(id),
-    name           TEXT     NOT NULL,
+    name           TEXT     NOT NULL
 );
 
 INSERT INTO prometheus_metric_update_methods(metric_type_id, name) VALUES
@@ -46,7 +46,7 @@ CREATE TABLE prometheus_custom_metric_sql (
     id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     query_text TEXT NOT NULL,
     custom_metric_id BIGINT REFERENCES prometheus_custom_metrics(id),
-    update_method_id SMALLINT REFERENCES prometheus_metric_update_methods(id),
+    update_method_id SMALLINT REFERENCES prometheus_metric_update_methods(id)
 );
 
 END;
