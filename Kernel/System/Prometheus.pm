@@ -35,6 +35,13 @@ sub new {
 
     $Self->{Settings} = $Kernel::OM->Get('Kernel::Config')->Get('Prometheus::Settings');
 
+    if (!$Self->{Settings}) {
+        $Kernel::OM->Get('Kernel::System::Log')->Log(
+            Priority => 'error',
+            Message  => 'Can\'t load prometheus settings! Did you create config file?',
+        );
+    }
+
     $Self->{Guard} = $Kernel::OM->Create(
         'Kernel::System::Prometheus::Guard',
         ObjectParams => {
@@ -50,20 +57,13 @@ sub new {
         )
     }
 
-    if (!$Self->{Settings}) {
-        $Kernel::OM->Get('Kernel::System::Log')->Log(
-            Priority => 'error',
-            Message  => 'Can\'t load prometheus settings! Did you create config file?',
-        );
-    }
-
-    if ( !$Self->{Guard}->Fetch ) {
+    if ( !$Self->{Guard}->Fetch() ) {
 
         $Kernel::OM->Get('Kernel::System::Log')->Log(
             Message  => 'Shared memory is empty. Creating new metrics...',
         );
 
-        $Self->_CreateMetrics;
+        $Self->_CreateMetrics();
     }
 
     return $Self;
@@ -78,11 +78,11 @@ sub Change {
 sub Render {
     my $Self = shift;
 
-    $Self->RefreshMetrics;
+    $Self->RefreshMetrics();
 
-    $Self->_LoadSharedMetrics || return 'empty result';
+    $Self->_LoadSharedMetrics() || return 'empty result';
 
-    $Self->{PrometheusObject}->render;
+    $Self->{PrometheusObject}->render();
 }
 
 sub RefreshMetrics {
@@ -94,8 +94,8 @@ sub RefreshMetrics {
 
     # Refresh daemon recurrent tasks metrics
     my $RecurrentTasks = [];
-    my $DaemonSummary  = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetDaemonTasksSummary;
-    my $Host           = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost;
+    my $DaemonSummary  = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetDaemonTasksSummary();
+    my $Host           = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost();
 
     for my $Summary (@$DaemonSummary) {
         next if $Summary->{Header} ne 'Recurrent cron tasks:';
@@ -195,7 +195,7 @@ sub UpdateDefaultMetrics {
                     GROUP BY queue.name, ticket_state.name',
         );
 
-        while ( my @Row = $DBObject->FetchrowArray ) {
+        while ( my @Row = $DBObject->FetchrowArray() ) {
             my ( $Queue, $Status, $Num ) = @Row;
             push @ArticleInfo, [ $Queue, $Status, $Num ];
         }
@@ -212,7 +212,7 @@ sub UpdateDefaultMetrics {
                     GROUP BY queue.name, ticket_state.name',
         );
 
-        while ( my @Row = $DBObject->FetchrowArray ) {
+        while ( my @Row = $DBObject->FetchrowArray() ) {
             my ( $Queue, $Status, $Num ) = @Row;
             push @TicketInfo, [ $Queue, $Status, $Num ];
         }
@@ -247,7 +247,7 @@ sub UpdateDefaultMetrics {
     }
 
     # Record info as metrics
-    my $Host = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost;
+    my $Host = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost();
 
     $Self->Change(
         Callback => sub {
@@ -296,9 +296,9 @@ sub UpdateCustomSQLMetrics {
 
     my $MetricManager = $Kernel::OM->Get('Kernel::System::Prometheus::MetricManager');
 
-    return if !$MetricManager->IsCustomMetricsEnabled;
+    return if !$MetricManager->IsCustomMetricsEnabled();
 
-    my $CustomMetricsSQLInfo = $MetricManager->CustomMetricsSQLInfoGet;
+    my $CustomMetricsSQLInfo = $MetricManager->CustomMetricsSQLInfoGet();
 
     return if !$CustomMetricsSQLInfo;
 
@@ -312,7 +312,7 @@ sub UpdateCustomSQLMetrics {
 
         my @Rows;
 
-        while ( my @Row = $DBObject->FetchrowArray ) {
+        while ( my @Row = $DBObject->FetchrowArray() ) {
             push @Rows, \@Row;
         }
 
@@ -344,12 +344,14 @@ sub IsAllCustomMetricsCreated {
     
     my $MetricManager = $Kernel::OM->Get('Kernel::System::Prometheus::MetricManager');
 
-    my $CustomMetricNames = $MetricManager->AllCustomMetricsNamesGet;
+    my $CustomMetricNames = $MetricManager->AllCustomMetricsNamesGet();
     
-    my @CreatedMetricNames = keys %{ $Self->{Guard}->Fetch };
+    my @CreatedMetricNames = keys %{ $Self->{Guard}->Fetch() || {} };
 
     for my $CustomMetricName ( @$CustomMetricNames ) {
-        return unless any { $_ eq $CustomMetricName } @CreatedMetricNames;
+        if ( !any { $_ eq $CustomMetricName } @CreatedMetricNames ) {
+            return;
+        }
     }
 
     return 1;
@@ -360,15 +362,15 @@ sub MergeCustomMetrics {
 
     my $MetricManager = $Kernel::OM->Get('Kernel::System::Prometheus::MetricManager');
 
-    return if !$MetricManager->IsCustomMetricsEnabled;
+    return if !$MetricManager->IsCustomMetricsEnabled();
 
-    my $CustomMetrics = $MetricManager->CreateCustomMetrics;
+    my $CustomMetrics = $MetricManager->CreateCustomMetrics();
 
     $Self->Change(
         Callback => sub {
             my $Metrics = shift;
             
-            for my $CustomMetricName (keys %$CustomMetrics) {
+            for my $CustomMetricName ( keys %$CustomMetrics ) {
                 $Metrics->{ $CustomMetricName } = $CustomMetrics->{ $CustomMetricName };
             }
 
@@ -382,13 +384,13 @@ sub MergeCustomMetrics {
 sub ClearMemory {
     my $Self = shift;
 
-    $Self->{Guard}->ClearMemory;
+    $Self->{Guard}->ClearMemory();
 }
 
 sub _LoadSharedMetrics {
     my $Self = shift;
 
-    my $SharedMetrics = $Self->{Guard}->Fetch;
+    my $SharedMetrics = $Self->{Guard}->Fetch();
 
     if (!$SharedMetrics) {
         $Kernel::OM->Get('Kernel::System::Log')->Log(
@@ -411,10 +413,10 @@ sub _CreateMetrics {
 
     my $MetricManager = $Kernel::OM->Get('Kernel::System::Prometheus::MetricManager');
 
-    my $Metrics = $MetricManager->CreateDefaultMetrics;
+    my $Metrics = $MetricManager->CreateDefaultMetrics();
 
     if ($MetricManager->IsCustomMetricsEnabled) {
-        my $CustomMetrics = $MetricManager->CreateCustomMetrics;
+        my $CustomMetrics = $MetricManager->CreateCustomMetrics();
         for my $CustomMetricName ( keys %$CustomMetrics ) {
             $Metrics->{$CustomMetricName} = $CustomMetrics->{$CustomMetricName};
         }

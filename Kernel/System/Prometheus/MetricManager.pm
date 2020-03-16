@@ -119,7 +119,7 @@ sub TryMetric {
             )
             )
         {
-            my @Row = $DBObject->FetchrowArray;
+            my @Row = $DBObject->FetchrowArray();
             unless( eval { $Metric->$UpdateMethod(@Row) } )
             {
                 $LogObject->Log(
@@ -341,7 +341,7 @@ sub MetricTypesGet {
     return if !$DBObject->Prepare( SQL => 'SELECT type_name, id FROM prometheus_metric_types' );
 
     my %Types;
-    while ( my @Row = $DBObject->FetchrowArray ) {
+    while ( my @Row = $DBObject->FetchrowArray() ) {
         $Types{$Row[0]} = $Row[1];
     }
 
@@ -357,7 +357,7 @@ sub AllCustomMetricsNamesGet {
 
     my @Names;
 
-    while ( my @Row = $DBObject->FetchrowArray ) {
+    while ( my @Row = $DBObject->FetchrowArray() ) {
         push @Names, $Row[0];
     }
 
@@ -381,7 +381,7 @@ sub AllCustomMetricsInfoGet {
     );
 
     # get main info about custom_metric
-    while ( my @Row = $DBObject->FetchrowArray ) {
+    while ( my @Row = $DBObject->FetchrowArray() ) {
 
         my $Metric = {
             Id           => $Row[0],
@@ -408,7 +408,7 @@ sub AllCustomMetricsInfoGet {
         );
 
         my @Labels;
-        while ( my @Row = $DBObject->FetchrowArray ) {
+        while ( my @Row = $DBObject->FetchrowArray() ) {
             push @Labels, $Row[0];
         }
 
@@ -423,7 +423,7 @@ sub AllCustomMetricsInfoGet {
         );
 
         my @Buckets;
-        while ( my @Row = $DBObject->FetchrowArray ) {
+        while ( my @Row = $DBObject->FetchrowArray() ) {
             push @Buckets, $Row[0];
         }
 
@@ -447,7 +447,7 @@ sub CustomMetricsSQLInfoGet {
 
     my %MetricsSQLInfo;
 
-    while ( my @Row = $DBObject->FetchrowArray ) {
+    while ( my @Row = $DBObject->FetchrowArray() ) {
         my ( $MetricName, $SQL, $Method ) = @Row;
         $MetricsSQLInfo{ $MetricName } = { SQL => $SQL, Method => $Method };
     }
@@ -490,7 +490,7 @@ sub UpdateMethodsGet {
     );
 
     my %UpdateMethods;
-    while ( my @Row = $DBObject->FetchrowArray ) {
+    while ( my @Row = $DBObject->FetchrowArray() ) {
         $UpdateMethods{$Row[0]} = $Row[1];
     }
 
@@ -518,7 +518,7 @@ sub CustomMetricGet {
             Limit => 1,
         );
 
-        while ( my @Row = $DBObject->FetchrowArray ) {
+        while ( my @Row = $DBObject->FetchrowArray() ) {
             $Param{MetricID} = $Row[0];
         }
     }
@@ -535,7 +535,7 @@ sub CustomMetricGet {
     );
 
     my %CustomMetric;
-    while ( my @Row = $DBObject->FetchrowArray ) {
+    while ( my @Row = $DBObject->FetchrowArray() ) {
         %CustomMetric = (
             Id           => $Row[0],
             Namespace    => $Row[1],
@@ -559,7 +559,7 @@ sub CustomMetricGet {
     );
 
     my @Labels;
-    while ( my @Row = $DBObject->FetchrowArray ) {
+    while ( my @Row = $DBObject->FetchrowArray() ) {
         push @Labels, $Row[0];
     }
 
@@ -574,7 +574,7 @@ sub CustomMetricGet {
     );
 
     my @Buckets;
-    while ( my @Row = $DBObject->FetchrowArray ) {
+    while ( my @Row = $DBObject->FetchrowArray() ) {
         push @Buckets, $Row[0];
     }
 

@@ -47,8 +47,8 @@ Don't use the constructor directly, use the ObjectManager instead:
 sub new {
     my ( $Type, %Param ) = @_;
 
-    if ($Kernel::OM->Get('Kernel::System::Prometheus::MetricManager')->IsMetricEnabled('HTTPRequestsTotal')) {
-        my $Host = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost;
+    if ( $Kernel::OM->Get('Kernel::System::Prometheus::MetricManager')->IsMetricEnabled('HTTPRequestsTotal') ) {
+        my $Host = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost();
         $Kernel::OM->Get('Kernel::System::Prometheus')->Change(
             Callback => sub {
                 my $Metrics = shift;

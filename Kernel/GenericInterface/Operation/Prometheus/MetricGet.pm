@@ -31,7 +31,7 @@ sub new {
 sub Run {
     my ( $Self, %Param ) = @_;
 
-    my $Data = { Text => $Kernel::OM->Get('Kernel::System::Prometheus')->Render };
+    my $Data = { Text => $Kernel::OM->Get('Kernel::System::Prometheus')->Render() };
 
     return {
         Success => 1,

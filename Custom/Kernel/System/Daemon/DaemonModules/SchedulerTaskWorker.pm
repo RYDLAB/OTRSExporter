@@ -133,7 +133,7 @@ sub Run {
     my ( $Self, %Param ) = @_;
 
     if ($Kernel::OM->Get('Kernel::System::Prometheus::MetricManager')->IsMetricEnabled('DaemonProcessCollector')) {
-        my $Host = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost;
+        my $Host = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost();
         $Kernel::OM->Get('Kernel::System::Prometheus')->NewProcessCollector(
             PID    => $$,
             Prefix => 'daemon_process',

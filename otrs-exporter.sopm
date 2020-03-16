@@ -7,7 +7,8 @@
     <URL>https://otrs.com</URL>
     <License>GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007</License>
     <Description Lang="en">A prometheus module for OTRS</Description>
-    <IntroInstall Type="post" Lang="en" Title="Thank you!">Thank you for choosing the OTRS-exporter!</IntroInstall>
+    <IntroInstall Type="post" Lang="en" Title="Thank you for installing OTRS-Exporter!">30-day trial period started!</IntroInstall>
+    <ChangeLog Version="0.0.1" Date="2020-02-16 17:00:00">First release</ChangeLog>
     <PackageIsVisible>1</PackageIsVisible>
     <PackageIsDownloadable>1</PackageIsDownloadable>
     <PackageIsRemovable>1</PackageIsRemovable>
@@ -132,8 +133,8 @@
     </DatabaseUninstall>
     <CodeInstall><![CDATA[
         $Kernel::OM->Get('Kernel::System::DB')->Do(
-            SQL => "INSERT INTO prometheus_metric_types(type_name) VALUES
-                     ('counter'),('gauge'),('histogram'),('summary')",
+            SQL => "INSERT INTO prometheus_metric_types(id, type_name) VALUES
+                     (1, 'counter'), (2, 'gauge'),(3, 'histogram'),(4, 'summary')",
         );
 
         $Kernel::OM->Get('Kernel::System::DB')->Do(

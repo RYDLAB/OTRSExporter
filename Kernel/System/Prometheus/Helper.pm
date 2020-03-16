@@ -22,7 +22,7 @@ sub new {
    my $Self = {};
    bless( $Self, $Type );
 
-   $Self->{Host} = hostname;
+   $Self->{Host} = hostname();
    $Self->{Temp} = {};
 
    return $Self;
@@ -41,21 +41,19 @@ sub CreateTempValue {
 }
 
 sub GetHost {
-   return shift->{Host};
+   return $_[0]->{Host};
 }
 
 sub StartCountdown {
-   shift->{TimeStart} = [gettimeofday];
+   $_[0]->{TimeStart} = [gettimeofday];
 }
 
 sub GetCountdown {
-   my $Self = shift;
-
-   if ($Self->{TimeStart}) {
-       return tv_interval($Self->{TimeStart});
+   if ($_[0]->{TimeStart}) {
+       return tv_interval($_[0]->{TimeStart});
    }
 
-   return 0;
+   return;
 }
 
 sub GetDaemonTasksSummary {

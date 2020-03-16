@@ -22,13 +22,15 @@ sub new {
     my $Self = {};
     bless( $Self, $Type );
 
-    $Self->{DECODER} = get_sereal_decoder;
-    $Self->{ENCODER} = get_sereal_encoder;
+    $Self->{DECODER} = get_sereal_decoder();
+    $Self->{ENCODER} = get_sereal_encoder();
 
     $Self->{SharedMem} = IPC::ShareLite->new(
         -key     => $Param{SHAREDKEY}   // 1999,
         -create  => $Param{CreateFlag}  // 1,
         -destroy => $Param{DestroyFlag} // 0,
+        -mode    => 0666,
+        -size    => 65536,
     );
 
     for my $Needed ( qw( DECODER ENCODER SharedMem ) ) {
@@ -37,7 +39,10 @@ sub new {
                 Priority => 'error',
                 Message  => "Prometheus::Guard can not to create object $Needed",
             );
+            
+            return;
         }
+
     }
 
     return $Self;
@@ -55,7 +60,7 @@ sub Change {
 
     return if !$Self->LockMemory( LockFlag => LOCK_EX|LOCK_NB );
 
-    my $Data = $Self->Fetch;
+    my $Data = $Self->Fetch();
 
     if (!$Data) {
         $Kernel::OM->Get('Kernel::System::Log')->Log(
@@ -97,7 +102,7 @@ sub Store {
 sub Fetch {
     my ( $Self, %Param ) = @_;
 
-    my $EncodedData = $Self->{SharedMem}->fetch;
+    my $EncodedData = $Self->{SharedMem}->fetch();
     return unless $EncodedData;
 
     my $Data = $Self->{DECODER}->decode($EncodedData);
@@ -112,15 +117,15 @@ sub LockMemory {
 }
 
 sub UnlockMemory {
-    my ( $Self, %Param ) = @_;
-
-    $Self->{SharedMem}->unlock;
+    $_[0]->{SharedMem}->unlock();
 }
 
 sub ClearMemory {
     my $Self = shift;
 
-    $Self->{SharedMem}->destroy(1);
+    $Self->LockMemory();
+    warn $Self->{SharedMem}->destroy(1);
+    $Self->UnlockMemory();
 }
 
 1

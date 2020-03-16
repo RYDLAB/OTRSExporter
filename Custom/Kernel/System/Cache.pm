@@ -433,7 +433,7 @@ sub DESTROY {
 
     my $PrometheusObject = $Kernel::OM->Get('Kernel::System::Prometheus');
     my $HelperObject     = $Kernel::OM->Get('Kernel::System::Prometheus::Helper');
-    my $Host = $HelperObject->GetHost;
+    my $Host = $HelperObject->GetHost();
 
     $PrometheusObject->Change(
         Callback => sub {
