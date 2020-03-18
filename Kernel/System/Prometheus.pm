@@ -81,8 +81,6 @@ sub Render {
 
     $Self->RefreshMetrics();
 
-    $Net::Prometheus::ProcessCollector::linux::BOOTTIME = 0;
-
     $Self->_LoadSharedMetrics() || return 'empty result';
 
     $Self->{PrometheusObject}->render();
@@ -211,7 +209,6 @@ sub ClearValuesWithDiedPids {
             next if pexists($PID);
 
             push @{ $ToDeleteKeys{$MetricName} }, $LabelValueKey;
-            warn $LabelValueKey;
             $HaveToDelete = 1;
         }
     }
@@ -468,7 +465,7 @@ sub MergeCustomMetrics {
             my $Metrics = shift;
 
             for my $CustomMetricName ( keys %$CustomMetrics ) {
-                $Metrics->{ $CustomMetricName } = $CustomMetrics->{ $CustomMetricName };
+                $Metrics->{ $CustomMetricName } //= $CustomMetrics->{ $CustomMetricName };
             }
 
             return 1;

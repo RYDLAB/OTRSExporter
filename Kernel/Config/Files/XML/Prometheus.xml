@@ -206,7 +206,7 @@
         <Navigation>Daemon::SchedulerCronTaskManager::Task</Navigation>
         <Value>
             <Hash>
-                <Item Key="TaskName">PrometheusClearDiedProcessCollectors</Item>
+                <Item Key="TaskName">PrometheusClearValuesWithDiedPids</Item>
                 <Item Key="Schedule">0 * * * *</Item><!--each minute -->
                 <Item Key="Module">Kernel::System::Prometheus</Item>
                 <Item Key="Function">ClearValuesWithDiedPids</Item>
