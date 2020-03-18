@@ -7,7 +7,15 @@
     <URL>https://otrs.com</URL>
     <License>GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007</License>
     <Description Lang="en">A prometheus module for OTRS</Description>
-    <IntroInstall Type="post" Lang="en" Title="Thank you for installing OTRS-Exporter!">30-day trial period started!</IntroInstall>
+    <IntroInstall Type="pre" Lang="en" Title="Needed packages">
+        To use OTRS exporter you will need a few packages:
+            Net::Prometheus Time::HiRes List::Util Scalar::Util Proc::ProcessTable Proc::Exists IPC::ShareLite Sereal
+        You can install them using cpanminus
+    </IntroInstall>
+    <IntroInstall Type="post" Lang="en" Title="Thank you for installing OTRS exporter!">
+        Thank you for installing OTRS exporter! Now you can create a new web-service using HTTP::Sendtext transport module and Prometheus::MetricGet operation!
+        Then you can configurate your Prometheus and Grafana servers using our example dashboards at $OTRS_HOME/doc/GrafanaExamples/
+    </IntroInstall>
     <ChangeLog Version="0.0.1" Date="2020-02-16 17:00:00">First release</ChangeLog>
     <PackageIsVisible>1</PackageIsVisible>
     <PackageIsDownloadable>1</PackageIsDownloadable>
@@ -19,6 +27,7 @@
     <ModuleRequired Version="1">List::Util</ModuleRequired>
     <ModuleRequired Version="1">Scalar::Util</ModuleRequired>
     <ModuleRequired Version="0.5">Proc::ProcessTable</ModuleRequired>
+    <ModuleRequired Version="1">Proc::Exists</ModuleRequired>
     <ModuleRequired Version="0.1">IPC::ShareLite</ModuleRequired>
     <ModuleRequired Version="4">Sereal</ModuleRequired>
     <OS>linux</OS>
@@ -53,6 +62,8 @@
         <File Permission="644" Location="Custom/Kernel/System/Daemon/DaemonModules/SchedulerCronTaskManager.pm"></File>
         <File Permission="644" Location="Custom/Kernel/System/Daemon/DaemonModules/SystemConfigurationSyncManager.pm"></File>
         <File Permission="644" Location="Custom/Kernel/System/Daemon/DaemonModules/SchedulerFutureTaskManager.pm"></File>
+
+        <File Permission="644" Location="var/httpd/htdocs/js/Core.Agent.Admin.Prometheus.js"></File>
 
         <File Permission="644" Location="doc/GrafanaExamples/dashboard-otrs.json"></File>
         <File Permission="644" Location="doc/GrafanaExamples/dashboard-web.json"></File>

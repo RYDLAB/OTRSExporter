@@ -39,7 +39,7 @@ sub new {
                 Priority => 'error',
                 Message  => "Prometheus::Guard can not to create object $Needed",
             );
-            
+
             return;
         }
 
@@ -118,14 +118,6 @@ sub LockMemory {
 
 sub UnlockMemory {
     $_[0]->{SharedMem}->unlock();
-}
-
-sub ClearMemory {
-    my $Self = shift;
-
-    $Self->LockMemory();
-    warn $Self->{SharedMem}->destroy(1);
-    $Self->UnlockMemory();
 }
 
 1

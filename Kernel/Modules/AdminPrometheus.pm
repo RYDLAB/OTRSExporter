@@ -40,7 +40,7 @@ sub Run {
     if ( !$Kernel::OM->Get('Kernel::System::Prometheus')->IsAllCustomMetricsCreated ) {
         $Param{NotifyMessage} = 'Not all custom metrics are deployed! Please deploy them';
     }
- 
+
     if( $Self->{Subaction} eq 'CreateMetric' ) {
         my $Output = $Self->_RenderCreateCustomMetricPage(%Param);
 
@@ -112,7 +112,7 @@ sub Run {
 
         return $Output;
     }
-    
+
     elsif ( $Self->{Subaction} eq 'ChangeMetric' ) {
         $Param{MetricID} = $ParamObject->GetParam( Param => 'ID' );
 
@@ -195,11 +195,11 @@ sub Run {
         return $Output;
     }
 
-    elsif ( $Self->{Subaction} eq 'DeleteAction' ) { 
+    elsif ( $Self->{Subaction} eq 'DeleteAction' ) {
         $Param{MetricID} = $ParamObject->GetParam( Param => 'MetricID' );
-        
+
         my $DeleteMetricSuccess = $MetricManager->DeleteMetric( MetricID => $Param{MetricID} );
- 
+
         if ( $DeleteMetricSuccess ) {
             $Param{NotifyMessage} = 'Metric successfully deleted!';
 
@@ -265,7 +265,7 @@ sub Run {
         $Param{NotifyPriority} = 'error';
 
         my $Output = $Self->_RenderCustomMetricsListPage(%Param);
-        
+
         return $Output;
     }
 
@@ -279,7 +279,7 @@ sub _RenderCustomMetricsListPage {
 
     # get custom metrics list
     $Param{CustomMetrics} = $Kernel::OM->Get('Kernel::System::Prometheus::MetricManager')->AllCustomMetricsInfoGet();
-    
+
     # make labels and buckets string
     for my $Metric (@{ $Param{CustomMetrics} }) {
         $Metric->{Labels} = join ' ', @{ $Metric->{Labels} };
@@ -345,7 +345,7 @@ sub _RenderChangeCustomMetricPage {
 
 sub _RenderCreateCustomMetricPage {
     my ( $Self, %Param ) = @_;
-    
+
     my $LayoutObject = $Kernel::OM->Get('Kernel::Output::HTML::Layout');
 
     #TODO: types and update methods we should take from database via model!
@@ -368,8 +368,8 @@ sub _RenderCreateCustomMetricPage {
     if ($Param{NotifyMessage}) {
         $Output .= $LayoutObject->Notify(
             Priority => $Param{NotifyPriority},
-            Info     => $Param{NotifyMessage}, 
-        ) 
+            Info     => $Param{NotifyMessage},
+        )
     }
     $Output .= $LayoutObject->Output(
         TemplateFile => 'AdminPrometheusCreateMetric',

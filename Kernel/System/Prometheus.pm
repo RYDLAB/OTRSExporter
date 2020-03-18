@@ -15,7 +15,8 @@ use Net::Prometheus::ProcessCollector::linux;
 
 use Kernel::System::VariableCheck qw( IsArrayRefWithData IsHashRefWithData );
 use Proc::ProcessTable;
-use List::Util qw(any);
+use Proc::Exists qw(pexists);
+use List::Util qw(any first);
 
 our @ObjectDependencies = (
     'Kernel::System::Prometheus::MetricManager',
@@ -49,7 +50,7 @@ sub new {
             DestroyFlag => 0,
         }
     );
-    
+
     if (!$Self->{PrometheusObject}) {
         $Kernel::OM->Get('Kernel::System::Log')->Log(
             Priority => 'error',
@@ -57,7 +58,7 @@ sub new {
         )
     }
 
-    if ( !$Self->{Guard}->Fetch() ) {
+    if (!IsHashRefWithData( $Self->{Guard}->Fetch() )) {
 
         $Kernel::OM->Get('Kernel::System::Log')->Log(
             Message  => 'Shared memory is empty. Creating new metrics...',
@@ -80,6 +81,8 @@ sub Render {
 
     $Self->RefreshMetrics();
 
+    $Net::Prometheus::ProcessCollector::linux::BOOTTIME = 0;
+
     $Self->_LoadSharedMetrics() || return 'empty result';
 
     $Self->{PrometheusObject}->render();
@@ -87,6 +90,13 @@ sub Render {
 
 sub RefreshMetrics {
     my $Self = shift;
+
+    # get running daemon cache
+    my $NodeID = $Kernel::OM->Get('Kernel::Config')->Get('NodeID') || 1;
+    return if !$Kernel::OM->Get('Kernel::System::Cache')->Get(
+        Type => 'DaemonRunning',
+        Key  => $NodeID,
+    );
 
     my $MetricManager = $Kernel::OM->Get('Kernel::System::Prometheus::MetricManager');
 
@@ -158,13 +168,100 @@ sub NewProcessCollector {
     $Self->Change(
         Callback => sub {
             my $Metrics = shift;
-            $Metrics->{"ProcCollector$Param{PID}"} = Net::Prometheus::ProcessCollector->new(
+            $Metrics->{"ProcessCollector$Param{PID}"} = Net::Prometheus::ProcessCollector->new(
                 pid    => $Param{PID},
                 labels => $Param{Labels},
                 prefix => $Param{Prefix},
             );
         }
     );
+
+    return 1;
+}
+
+sub ClearValuesWithDiedPids {
+    my ( $Self, %Param ) = @_;
+
+    my $MetricManager = $Kernel::OM->Get('Kernel::System::Prometheus::MetricManager');
+
+    my %ToDeleteKeys;
+    my $MetricsCopy = $Self->{Guard}->Fetch();
+
+    my $GetWorkerIndex = sub {
+        my $MetricName = shift || return;
+        for my $Index ( 0 .. scalar @{ $MetricsCopy->{$MetricName}{labels} } ) {
+            if ($MetricsCopy->{$MetricName}{labels}[$Index] eq 'worker') {
+                return $Index;
+            }
+        }
+
+        return;
+    };
+
+    my $HaveToDelete;
+
+    for my $MetricName (qw/ HTTPRequestsTotal HTTPResponseSizeBytes HTTPRequestDurationSeconds /) {
+        next if !$MetricManager->IsMetricEnabled($MetricName);
+
+        $ToDeleteKeys{$MetricName} = [];
+        my $WorkerIndex = $GetWorkerIndex->($MetricName);
+
+        for my $LabelValueKey (keys %{ $MetricsCopy->{$MetricName}{labelvalues} }) {
+            my $PID = $MetricsCopy->{$MetricName}{labelvalues}{$LabelValueKey}[$WorkerIndex];
+            next if pexists($PID);
+
+            push @{ $ToDeleteKeys{$MetricName} }, $LabelValueKey;
+            warn $LabelValueKey;
+            $HaveToDelete = 1;
+        }
+    }
+
+    return if !%ToDeleteKeys;
+    return if !$HaveToDelete;
+
+    $Self->Change(
+        Callback => sub {
+            my $Metrics = shift;
+
+            if ( IsArrayRefWithData($ToDeleteKeys{HTTPRequestsTotal}) ) {
+                for my $ToDeleteKey (@{ $ToDeleteKeys{HTTPRequestsTotal} }) {
+                    delete $Metrics->{HTTPRequestsTotal}{labelvalues}{$ToDeleteKey};
+                    delete $Metrics->{HTTPRequestsTotal}{values}{$ToDeleteKey};
+                }
+            }
+
+            for my $HistogramMetric (qw/ HTTPResponseSizeBytes HTTPRequestDurationSeconds /) {
+                next if !IsArrayRefWithData($ToDeleteKeys{$HistogramMetric});
+                for my $ToDeleteKey (@{ $ToDeleteKeys{$HistogramMetric} }) {
+                    delete $Metrics->{$HistogramMetric}{bucketcounts}{$ToDeleteKey};
+                    delete $Metrics->{$HistogramMetric}{labelvalues}{$ToDeleteKey};
+                    delete $Metrics->{$HistogramMetric}{sums}{$ToDeleteKey};
+                }
+            }
+
+            return 1;
+        }
+    );
+
+    return 1;
+}
+
+sub ClearDiedProcessCollectors {
+    my ( $Self, %Param ) = @_;
+
+    my $Metrics = $Self->{Guard}->Fetch();
+
+    my @DiedCollectors;
+    for my $MetricName( keys %{ $Metrics } ) {
+        next if $MetricName !~ /ProcessCollector\K\d+/p;
+        my $PID = ${^MATCH};
+        next if pexists($PID);
+        push @DiedCollectors, "ProcessCollector$PID";
+    }
+
+    return 1 if !@DiedCollectors;
+
+    $Self->Change( Callback => sub { delete $_[0]->{ $_ } for @DiedCollectors } );
 
     return 1;
 }
@@ -259,7 +356,7 @@ sub UpdateDefaultMetrics {
                     labels => [ host => $Host, level => 'parent', worker => $MainProcPID ],
                     prefix => 'http_process',
                 );
-                
+
                 for my $PID (@ChildPIDs) {
                     $Metrics->{"ProcessCollector$PID"} = Net::Prometheus::ProcessCollector->new(
                         pid    => $PID,
@@ -341,11 +438,11 @@ sub UpdateCustomSQLMetrics {
 
 sub IsAllCustomMetricsCreated {
     my ( $Self, %Param ) = @_;
-    
+
     my $MetricManager = $Kernel::OM->Get('Kernel::System::Prometheus::MetricManager');
 
     my $CustomMetricNames = $MetricManager->AllCustomMetricsNamesGet();
-    
+
     my @CreatedMetricNames = keys %{ $Self->{Guard}->Fetch() || {} };
 
     for my $CustomMetricName ( @$CustomMetricNames ) {
@@ -369,7 +466,7 @@ sub MergeCustomMetrics {
     $Self->Change(
         Callback => sub {
             my $Metrics = shift;
-            
+
             for my $CustomMetricName ( keys %$CustomMetrics ) {
                 $Metrics->{ $CustomMetricName } = $CustomMetrics->{ $CustomMetricName };
             }
@@ -384,7 +481,8 @@ sub MergeCustomMetrics {
 sub ClearMemory {
     my $Self = shift;
 
-    $Self->{Guard}->ClearMemory();
+    $Self->Change( Callback => sub { $_[0] = {} } );
+    $Self->_CreateMetrics();
 }
 
 sub _LoadSharedMetrics {

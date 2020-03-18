@@ -25,7 +25,7 @@
     <div class="SidebarColumn">
 
         <div class="WidgetSimple">
-            
+
             <div class="Header">
                 <h2>[% Translate("Actions") %]</h2>
             </div>
@@ -80,7 +80,7 @@
                 <h2>[% Translate("Change custom metric") | html %]</h2>
             </div>
             <div class="Content">
-                <form action="[% Env("CGIHandle") %]" method="post" class="Validate" id="AdminChangeMetricForm"> 
+                <form action="[% Env("CGIHandle") %]" method="post" class="Validate" id="AdminChangeMetricForm">
                     <input type="hidden" name="Action" value="[% Env("Action") %]"   />
                     <input type="hidden" name="Subaction" value="ChangeMetricAction" />
                     <input type="hidden" name="MetricID" value="[% Data.MetricID %]"/>

@@ -22,6 +22,15 @@
 
         <div class="WidgetSimple">
             <div class="Header">
+                <h2><label for="FilterResults">[% Translate("Filter for metrics") | html %]</label></h2>
+            </div>
+            <div class="Content">
+                <input type="text" id="FilterResults" class="FilterBox" placeholder="[% Translate("Just start typing to filter...") | html %]" name="FilterResults" value="" title="[% Translate("Filter for results") | html %]">
+            </div>
+        </div>
+
+        <div class="WidgetSimple">
+            <div class="Header">
                 <h2>[% Translate("Actions") | html %]</h2>
             </div>
             <div class="Content">
@@ -33,7 +42,7 @@
                         <form action="[% Env("CGIHandle") %]" method="post">
                             <input type="hidden" name="Action" value="[% Env("Action") %]" />
                             <input type="hidden" name="Subaction" value="DeployMetrics"/>
-                            
+
                             <button class="CallForAction Fullsize Center" type="submit">
                                 <span><i class="fa fa-rocket"></i>
                                     [% Translate("Deploy metrics") | html %]

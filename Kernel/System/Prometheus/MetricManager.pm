@@ -701,7 +701,7 @@ sub UpdateCustomMetricAllProps {
             return;
         }
     }
-    
+
     # get metric_type_id
     my $MetricTypes = $Self->MetricTypesGet;
     $Param{MetricTypeID} = $MetricTypes->{ lc $Param{MetricType} };
@@ -715,7 +715,7 @@ sub UpdateCustomMetricAllProps {
     );
 
     # update prometheus_custom_metric_sql
-    
+
     # delete previous sql if exists
     return if !$DBObject->Do(
         SQL  => 'DELETE FROM prometheus_custom_metric_sql WHERE custom_metric_id = ?',
@@ -758,7 +758,7 @@ sub UpdateCustomMetricAllProps {
         SQL  => 'DELETE FROM prometheus_custom_metric_buckets WHERE custom_metric_id = ?',
         Bind => [ \$Param{MetricID} ],
     );
-    
+
     # insert new buckets
     for my $Bucket (@{ $Param{MetricBuckets} }) {
         return if !$DBObject->Do(
@@ -818,7 +818,7 @@ sub UpdateCustomMetricName {
             Priority => 'error',
             Message  => 'Need MetricName or MetricID !',
         );
-        
+
         return;
     }
 
@@ -868,7 +868,7 @@ sub UpdateCustomMetricType {
 
         return;
     }
-    
+
     my $MetricTypes = $Self->MetricTypesGet;
 
     $Param{MetricTypeID} = $MetricTypes->{ $Param{MetricType} };
