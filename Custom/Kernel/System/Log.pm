@@ -20,6 +20,9 @@ use Carp ();
 our @ObjectDependencies = (
     'Kernel::Config',
     'Kernel::System::Encode',
+    'Kernel::System::Prometheus',
+    'Kernel::System::MetricManager',
+    'Kernel::System::Helper',
 );
 
 =head1 NAME
@@ -186,7 +189,11 @@ sub Log {
         Line      => $Line1,
     );
 
-    if( $Kernel::OM->Get('Kernel::System::Prometheus::MetricManager')->IsMetricEnabled('OTRSLogsTotal') ) {
+    if( 
+        !$Param{PrometheusLog}
+        && $Kernel::OM->Get('Kernel::System::Prometheus::MetricManager')->IsMetricEnabled('OTRSLogsTotal')
+    )
+    {
         my $Host = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost();
         $Kernel::OM->Get('Kernel::System::Prometheus')->Change(
             Callback => sub {

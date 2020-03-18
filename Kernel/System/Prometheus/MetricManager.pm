@@ -52,6 +52,7 @@ sub TryMetric {
     for my $Needed (qw( MetricName MetricHelp MetricType )) {
         if (!$Param{$Needed}) {
             $LogObject->Log(
+                PrometheusLog => 1,
                 Priority => 'error',
                 Message  => "Need $Needed to try create metric!",
             );
@@ -71,6 +72,7 @@ sub TryMetric {
         for my $Bucket (@{ $Param{MetricBuckets} }) {
             if (!looks_like_number($Bucket)) {
                 $LogObject->Log(
+                    PrometheusLog => 1,
                     Priority => 'error',
                     Message  => 'One or more buckets are not number!',
                 );
@@ -92,6 +94,7 @@ sub TryMetric {
 
     if (!$Metric) {
         $LogObject->Log(
+            PrometheusLog => 1,
             Priority => 'error',
             Message  => $@ || 'Something went wrong while trying to create metric',
         );
@@ -103,6 +106,7 @@ sub TryMetric {
 
         if (!$Param{UpdateMethod}) {
             $LogObject->Log(
+                PrometheusLog => 1,
                 Priority => 'error',
                 Message  => 'Need metric method with SQL!',
             );
@@ -123,6 +127,7 @@ sub TryMetric {
             unless( eval { $Metric->$UpdateMethod(@Row) } )
             {
                 $LogObject->Log(
+                    PrometheusLog => 1,
                     Priority => 'error',
                     Message  => $@ || 'Something went wrong while trying to update metric',
                 );
@@ -191,6 +196,7 @@ sub GetLabelsFromSQL {
 
     if ( !$Param{SQL} ) {
         $Kernel::OM->Get('Kernel::System::Log')->Log(
+            PrometheusLog => 1,
             Priority => 'Error',
             Message  => 'Need SQL!',
         );
@@ -462,6 +468,7 @@ sub UpdateMethodsGet {
 
         if (!$Param{MetricType}) {
             $Kernel::OM->Get('Kernel::System::Log')->Log(
+                PrometheusLog => 1,
                 Priority => 'Error',
                 Message  => 'Need metric type to find update methods!',
             );
@@ -473,6 +480,7 @@ sub UpdateMethodsGet {
 
         unless ( $Param{MetricTypeId} = $MetricTypes->{ lc $Param{MetricType} } ) {
             $Kernel::OM->Get('Kernel::System::Log')->Log(
+                PrometheusLog => 1,
                 Priority => 'error',
                 Message  => 'Wrong metric type!',
             );
@@ -502,6 +510,7 @@ sub CustomMetricGet {
 
     unless ( $Param{MetricName} || $Param{MetricID} ) {
         $Kernel::OM->Get('Kernel::System::Log')->Log(
+            PrometheusLog => 1,
             Priority => 'Error',
             Message  => 'Need metric name or ID!',
         );
@@ -590,6 +599,7 @@ sub NewCustomMetric {
     for my $RequiredParam (qw( MetricName MetricHelp MetricType )) {
         if (!$Param{$RequiredParam}) {
             $Kernel::OM->Get('Kernel::System::Log')->Log(
+                PrometheusLog => 1,
                 Priority => 'Error',
                 Message  => "Need $RequiredParam!",
             );
@@ -599,6 +609,7 @@ sub NewCustomMetric {
 
     if ( eval { $Self->CustomMetricGet( MetricName => $Param{MetricName} )->{Id} } ) {
         $Kernel::OM->Get('Kernel::System::Log')->Log(
+            PrometheusLog => 1,
             Priority => 'Error',
             Message  => 'Metric with this name already exists!',
         );
@@ -613,6 +624,7 @@ sub NewCustomMetric {
 
     unless ( $MetricTypes->{$Param{MetricType}} ) {
         $Kernel::OM->Get('Kernel::System::Log')->Log(
+            PrometheusLog => 1,
             Priority => 'Error',
             Message  => 'Wrong metric type!',
         );
@@ -670,6 +682,7 @@ sub NewCustomMetric {
 
         if (!$MetricUpdateMethods) {
             $Kernel::OM->Get('Kernel::System::Log')->Log(
+                PrometheusLog => 1,
                 Priority => 'Error',
                 Message  => 'Cant locate update-methods for this metric type!',
             );
@@ -694,6 +707,7 @@ sub UpdateCustomMetricAllProps {
     for my $RequiredParameter (qw( MetricID MetricName MetricHelp MetricType )) {
         if ( !$Param{ $RequiredParameter } ) {
             $Kernel::OM->Get('Kernel::System::Log')->Log(
+                PrometheusLog => 1,
                 Priority => 'Error',
                 Message  => "Need $RequiredParameter",
             );
@@ -725,6 +739,7 @@ sub UpdateCustomMetricAllProps {
     if ( $Param{SQL} ) {
         if ( !$Param{UpdateMethod} ) {
             $Kernel::OM->Get('Kernel::System::Log')->Log(
+                PrometheusLog => 1,
                 Priority => 'Error',
                 Message  => 'Need UpdateMethod to insert SQL query!',
             );
@@ -795,6 +810,7 @@ sub UpdateCustomMetricNamespace {
 
     unless ( $Param{MetricNamespace} && $Param{MetricID} ) {
         $Kernel::OM->Get('Kernel::System::Log')->Log(
+            PrometheusLog => 1,
             Priority => 'error',
             Message  => 'Need MetricNamespace or MetricID !',
         );
@@ -815,6 +831,7 @@ sub UpdateCustomMetricName {
 
     unless ( $Param{MetricName} && $Param{MetricID} ) {
         $Kernel::OM->Get('Kernel::System::Log')->Log(
+            PrometheusLog => 1,
             Priority => 'error',
             Message  => 'Need MetricName or MetricID !',
         );
@@ -824,6 +841,7 @@ sub UpdateCustomMetricName {
 
     if ( eval { $Self->CustomMetricGet->{Id} } ) {
         $Kernel::OM->Get('Kernel::System::Log')->Log(
+            PrometheusLog => 1,
             Priority => 'error',
             Message  => 'Metric with this name already exists',
         );
@@ -842,6 +860,7 @@ sub UpdateCustomMetricHelp {
 
     unless ( $Param{MetricHelp} && $Param{MetricID} ) {
         $Kernel::OM->Get('Kernel::System::Log')->Log(
+            PrometheusLog => 1,
             Priority => 'error',
             Message  => 'Need MetricHelp or MetricID !',
         );
@@ -862,6 +881,7 @@ sub UpdateCustomMetricType {
 
     unless ( $Param{MetricType} && $Param{MetricID} ) {
         $Kernel::OM->Get('Kernel::System::Log')->Log(
+            PrometheusLog => 1,
             Priority => 'error',
             Message  => 'Need MetricType of MetricID',
         );
@@ -875,6 +895,7 @@ sub UpdateCustomMetricType {
 
     if (!$Param{MetricTypeID}) {
         $Kernel::OM->Get('Kernel::System::Log')->Log(
+            PrometheusLog => 1,
             Priority => 'error',
             Message  => 'Wrong MetricType!',
         );
@@ -895,6 +916,7 @@ sub UpdateCustomMetricSQL {
 
     unless ( $Param{SQL} && $Param{MetricID} ) {
         $Kernel::OM->Get('Kernel::System::Log')->Log(
+            PrometheusLog => 1,
             Priority => 'error',
             Message  => 'Need SQL or MetricID !',
         );
@@ -915,6 +937,7 @@ sub UpdateCustomMetricUpdateMethod {
 
     unless ( $Param{MetricType} && $Param{UpdateMethod} && $Param{MetricID} ) {
         $Kernel::OM->Get('Kernel::System::Log')->Log(
+            PrometheusLog => 1,
             Priority => 'error',
             Message  => 'Need UpdateMethod or MetricID',
         );
@@ -926,6 +949,7 @@ sub UpdateCustomMetricUpdateMethod {
     $Param{UpdateMethodID} = $UpdateMethods->{ $Param{MetricType} };
     if (!$Param{UpdateMethodID}) {
         $Kernel::OM->Get('Kernel:System::Log')->Log(
+            PrometheusLog => 1,
             Priority => 'error',
             Message  => 'Wrong MetricType or UpdateMethod!',
         );
@@ -946,6 +970,7 @@ sub DeleteMetric {
 
     if ( !$Param{MetricID} ) {
         $Kernel::OM->Get('Kernel::System::Log')->Log(
+            PrometheusLog => 1,
             Priority => 'Error',
             Message  => 'Need MetricID!',
         );

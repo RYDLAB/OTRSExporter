@@ -13,11 +13,9 @@ use warnings;
 
 our $ObjectManagerDisabled = 1;
 
-=head1 NAME
-
-=head1 PUBLIC INTERFACE
-
-=cut
+our @ObjectDependencies = (
+    'Kernel::System::Prometheus',
+);
 
 sub new {
     my ( $Type, %Param ) = @_;

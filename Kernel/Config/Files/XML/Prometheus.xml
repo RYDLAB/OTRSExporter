@@ -23,6 +23,9 @@
             <Hash>
                 <Item ValueType="String" Key="SharedMemoryKey">1999</Item>
                 <Item ValueType="String" Key="ServerCMND">/usr/sbin/apache2 -k start</Item>
+
+                <Item ValueType="String" Key="AccessLogin">your_login_for_prometheus</Item>
+                <Item ValueType="String" Key="AccessPassword">your_password_for_prometheus</Item>
             </Hash>
         </Value>
     </Setting>

@@ -38,6 +38,7 @@ sub new {
 
     if (!$Self->{Settings}) {
         $Kernel::OM->Get('Kernel::System::Log')->Log(
+            PrometheusLog => 1,
             Priority => 'error',
             Message  => 'Can\'t load prometheus settings! Did you create config file?',
         );
@@ -53,6 +54,7 @@ sub new {
 
     if (!$Self->{PrometheusObject}) {
         $Kernel::OM->Get('Kernel::System::Log')->Log(
+            PrometheusLog => 1,
             Priority => 'error',
             Message  => 'Can\'t create prometheus object!',
         )
@@ -61,6 +63,7 @@ sub new {
     if (!IsHashRefWithData( $Self->{Guard}->Fetch() )) {
 
         $Kernel::OM->Get('Kernel::System::Log')->Log(
+            PrometheusLog => 1,
             Message  => 'Shared memory is empty. Creating new metrics...',
         );
 
@@ -112,6 +115,7 @@ sub RefreshMetrics {
 
     if (!IsArrayRefWithData($RecurrentTasks)) {
         $Kernel::OM->Get('Kernel::System::Log')->Log(
+            PrometheusLog => 1,
             Priority => 'error',
             Message  => 'Didn\'t get any data about recurrent tasks',
         );
@@ -156,6 +160,7 @@ sub NewProcessCollector {
 
     if ( !$Param{PID} ) {
         $Kernel::OM->Get('Kernel::System::Log')->Log(
+            PrometheusLog => 1,
             Priority => 'error',
             Message  => 'Didn\'t get PID to collect',
         );
@@ -489,6 +494,7 @@ sub _LoadSharedMetrics {
 
     if (!$SharedMetrics) {
         $Kernel::OM->Get('Kernel::System::Log')->Log(
+            PrometheusLog => 1,
             Priority => 'error',
             Message  => 'Prometheus can not load metrics from shared memory. It\'s empty!',
         );
