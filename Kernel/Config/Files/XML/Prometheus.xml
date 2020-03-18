@@ -27,20 +27,6 @@
         </Value>
     </Setting>
 
-    <-- Available prometheus metric types -->
-
-    <Setting Name="Prometheus::MetricTypes" Required="1" Valid="1">
-        <Description Translatable="1">Valid metric types for prometheus</Description>
-        <Value>
-            <Array>
-                <Item ValueType="String">counter</Item>
-                <Item ValueType="String">gauge</Item>
-                <Item ValueType="String">histogram</Item>
-                <Item ValueType="String">summary</Item>
-            </Array>
-        </Value>
-    </Setting>
-
     <-- Default metrics -->
 
     <Setting Name="Prometheus::Metrics::Default::Enabled" Required="1" Valid="1">

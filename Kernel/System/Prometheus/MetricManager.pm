@@ -212,7 +212,7 @@ sub GetLabelsFromSQL {
 sub _GetDefaultMetricsConstructors {
     my $Self = shift;
 
-    my $MetricCreator = Net::Prometheus->new;
+    my $MetricCreator = Net::Prometheus->new();
     my $HTTPMetricGroup = $MetricCreator->new_metricgroup(namespace => 'http');
     my $OTRSMetricGroup = $MetricCreator->new_metricgroup(namespace  => 'otrs');
     my $RecurrentTasksMetricGroup = $MetricCreator->new_metricgroup(namespace => 'recurrent_task');
@@ -279,7 +279,7 @@ sub _GetDefaultMetricsConstructors {
             $OTRSMetricGroup->new_counter(
                 name   => 'logs_total',
                 help   => 'The number of the logs',
-                labels => [qw( host priority )],
+                labels => [qw( host priority prefix module )],
             );
         },
 
