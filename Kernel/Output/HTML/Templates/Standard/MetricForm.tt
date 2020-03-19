@@ -1,0 +1,71 @@
+# --
+# Copyright (C) 2001-2020 OTRS AG, https://otrs.com/
+# --
+# This software comes with ABSOLUTELY NO WARRANTY. For details, see
+# the enclosed file COPYING for license information (GPL). If you
+# did not receive this file, see https://www.gnu.org/licenses/gpl-3.0.txt.
+# --
+
+<fieldset class="TableLike FixedLabelSmall">
+
+    <label for="MetricNamespace">[% Translate("Namespace") | html %]:</label>
+    <div class="Field">
+        <input type="text" name="MetricNamespace" id="MetricNamespace" class="W50pc" value="[% Data.MetricNamespace | html%]">
+        <p class="FieldExplanation">[% Translate("Prefix for metric like here:") |html %] 'namespace_name{labels} value'</p>
+    </div>
+    <div class="Clear"></div>
+
+    <label class="Mandatory" for="MetricName"><span class="Marker">*</span> [% Translate("Name") | html %]:</label>
+    <div class="Field">
+        <input type="text" name="MetricName" id="MetricName" class="W50pc Validate_Required" value="[% Data.MetricName | html %]">
+        <div id="MetricNameError" class="TooltipErrorMessage"><p>[% Translate("This field is required") | html %]</p></div>
+    </div>
+    <div class="Clear"></div>
+
+    <label class="Mandatory" for="MetricHelp"><span class="Marker">*</span> [% Translate("Help") | html %]:</label>
+    <div class="Field">
+        <input type="text" name="MetricHelp" id="MetricHelp" class="W50pc Validate_Required" value="[% Data.MetricHelp | html %]">
+        <div id="MetricHelpError" class="TooltipErrorMessage"><p>[% Translate("This field is required") | html %]</p></div>
+        <p class="FieldExplanation">[% Translate("Description for metric") |html %]</p>
+    </div>
+    <div class="Clear"></div>
+
+    <label class="Mandatory" for="MetricType"><span class="Marker">*</span>[% Translate("Metric type") | html %]:</label>
+    <div class="Field">
+        [% Data.MetricTypeStrg %]
+    </div>
+    <div class="Clear"></div>
+
+    <label for="MetricBuckets">[% Translate("Buckets") | html %]:</label>
+    <div class="Field">
+        <input type="text" name="MetricBuckets" id="MetricBuckets" class="W50pc" value="[% Data.MetricBuckets | html %]">
+        <p class="FieldExplanation">[% Translate("Buckets for histogramm or summary, separated by space. For example: 0.1 0.5 1 2 5 10 100") | html %]</p>
+    </div>
+    <div class="Clear"></div>
+
+    <label class="Mandatory" for="SQL"><span class="Marker">*</span>[% Translate("Cron SQL") | html %]:</label>
+    <div class="Field">
+        <textarea name="SQL" id="SQL" rows="3" class="W75pc Validate_Required [%IF Data.SQLErrorMessage %]ServerError[% END %]">[% Data.SQL | html %]</textarea>
+        <div id="SQLError" class="TooltipErrorMessage"><p>[% Translate("This field is required") | html %]</p></div>
+        [% IF Data.SQLErrorMessage %]
+        <div id="SQLServerError" class="TooltipErrorMessage">
+            <p>[% Translate(Data.SQLErrorMessage) | html %]</p>
+        </div>
+        [% END %]
+        <p class="FieldExplanation">[% Translate("Metric will updating via database using this SQL query. The last column is always value to update. Other columns are labels and they will takes automatically") | html %]</p>
+    </div>
+    <div class="Clear"></div>
+
+    <label class="Mandatory" for="UpdateMethod"><span class="Marker">*</span>[% Translate("Update method") | html %]:</label>
+    <div class="Field">
+        [% Data.UpdateMethods %]
+        <p class="FieldExplanation">[% Translate("Method to be used for update") | html %]</p>
+        <p class="FieldExplanation">[% Translate("inc - increment, dec -decrement, set - set value, observe - observe using buckets") | html %]</p>
+    </div>
+    <div class="Clear"></div>
+
+    <div class="Field SpacingTop">
+        <button class="Primary CallForAction" type="submit" id="Run" value="[% Translate("Save and finish") | html %]"><span>[% Translate("Save and finish") | html %]</span></button>
+    </div>
+
+</fieldset>

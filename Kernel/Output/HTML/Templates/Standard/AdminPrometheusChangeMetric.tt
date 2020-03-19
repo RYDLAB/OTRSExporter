@@ -1,0 +1,94 @@
+# --
+# Copyright (C) 2001-2020 OTRS AG, https://otrs.com/
+# --
+# This software comes with ABSOLUTELY NO WARRANTY. For details, see
+# the enclosed file COPYING for license information (GPL). If you
+# did not receive this file, see https://www.gnu.org/licenses/gpl-3.0.txt.
+# --
+
+<div class="MainBox ARIARoleMain LayoutFixedSidebar SidebarFirst">
+    <h1 class="InvisibleText">[% Translate("Prometheus") | html %]</h1>
+
+    [% BreadcrumbPath = [
+            {
+                Name => Translate('Custom metrics'),
+                Link => Env("Action"),
+            },
+            {
+                Name => Translate('Change metric'),
+            },
+        ]
+    %]
+
+    [% INCLUDE "Breadcrumb.tt" Path = BreadcrumbPath %]
+
+    <div class="SidebarColumn">
+
+        <div class="WidgetSimple">
+
+            <div class="Header">
+                <h2>[% Translate("Actions") %]</h2>
+            </div>
+            <div class="Content">
+                <ul class="ActionList">
+                    <li>
+                        <form action="[% Env("CGIHandle") %]" method="post">
+                            <input type="hidden" name="Action" value="[% Env("Action") %]" />
+                            <input type="hidden" name="Subaction" value="DeleteAction"/>
+                            <input type="hidden" name="MetricID" value="[% Data.MetricID %]" />
+
+                            <button class="CallForAction Fullsize Center" type="submit">
+                                <span><i class="fa fa-trash-o"></i>
+                                    [% Translate("Delete metric") | html %]
+                                </span>
+                            </button>
+                        </form>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="WidgetSimple">
+            <div class="Header">
+                <h2>[% Translate("Hint") | html %] </h2>
+            </div>
+            <div class="Content">
+                <div class="ExplanationChangingMetric">
+                    <p class="FieldExplanation">
+                        [% Translate("Here you can change custom metrics for Prometheus. Also you can set SQL-query(in which last column is the value for metric and other is the labels) to automatically update metric") | html %]
+                    </p>
+                    <p class="FieldExplanation">
+                        [% Translate("if you want your metric to be updated automatically through the database, you can specify the SQL-query and update method according to the following pattern: ") %]
+                    </p>
+                    <p class="FieldExplanation">
+                        SELECT label1, label2, ... labelN, update_value FROM ...
+                    </p>
+                    <p class="FieldExplanation">
+                        [% Translate("Where label1 .. labelN are labels in your metric and update_value is value to update metric") | html %]
+                    </p>
+
+                    <p class="FieldExplanation">[% Translate("You can check your SQL query in ") %]<a href="[% Env("Baselink") %]Action=AdminSelectBox">SQL Box</a></p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="ContentColumn">
+        <div class="WidgetSimple">
+            <div class="Header">
+                <h2>[% Translate("Change custom metric") | html %]</h2>
+            </div>
+            <div class="Content">
+                <form action="[% Env("CGIHandle") %]" method="post" class="Validate" id="AdminChangeMetricForm">
+                    <input type="hidden" name="Action" value="[% Env("Action") %]"   />
+                    <input type="hidden" name="Subaction" value="ChangeMetricAction" />
+                    <input type="hidden" name="MetricID" value="[% Data.MetricID %]"/>
+
+                    [% INCLUDE MetricForm.tt %]
+                </form>
+            </div>
+        </div>
+    </div>
+
+</div>

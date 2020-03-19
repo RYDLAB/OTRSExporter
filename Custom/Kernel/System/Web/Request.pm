@@ -67,7 +67,7 @@ sub new {
     my ( $Type, %Param ) = @_;
 
     if ($Kernel::OM->Get('Kernel::System::Prometheus::MetricManager')->IsMetricEnabled('HTTPRequestsTotal')) {
-        my $Host = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost;
+        my $Host = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost();
         $Kernel::OM->Get('Kernel::System::Prometheus')->Change(
             Callback => sub {
                 my $Metrics = shift;

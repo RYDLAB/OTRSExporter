@@ -13,11 +13,9 @@ use warnings;
 
 our $ObjectManagerDisabled = 1;
 
-=head1 NAME
-
-=head1 PUBLIC INTERFACE
-
-=cut
+our @ObjectDependencies = (
+    'Kernel::System::Prometheus',
+);
 
 sub new {
     my ( $Type, %Param ) = @_;
@@ -31,7 +29,7 @@ sub new {
 sub Run {
     my ( $Self, %Param ) = @_;
 
-    my $Data = { Text => $Kernel::OM->Get('Kernel::System::Prometheus')->Render };
+    my $Data = { Text => $Kernel::OM->Get('Kernel::System::Prometheus')->Render() };
 
     return {
         Success => 1,

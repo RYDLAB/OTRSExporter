@@ -22,22 +22,28 @@ sub new {
     my $Self = {};
     bless( $Self, $Type );
 
-    $Self->{DECODER} = get_sereal_decoder;
-    $Self->{ENCODER} = get_sereal_encoder;
+    $Self->{DECODER} = get_sereal_decoder();
+    $Self->{ENCODER} = get_sereal_encoder();
 
     $Self->{SharedMem} = IPC::ShareLite->new(
         -key     => $Param{SHAREDKEY}   // 1999,
         -create  => $Param{CreateFlag}  // 1,
         -destroy => $Param{DestroyFlag} // 0,
+        -mode    => 0666,
+        -size    => 65536,
     );
 
     for my $Needed ( qw( DECODER ENCODER SharedMem ) ) {
         if (!$Self->{$Needed}) {
             $Kernel::OM->Get('Kernel::System::Log')->Log(
+                PrometheusLog => 1,
                 Priority => 'error',
                 Message  => "Prometheus::Guard can not to create object $Needed",
             );
+
+            return;
         }
+
     }
 
     return $Self;
@@ -48,24 +54,19 @@ sub Change {
 
     if (!$Param{Callback}) {
         $Kernel::OM->Get('Kernel::System::Log')->Log(
+            PrometheusLog => 1,
             Priority => 'error',
             Message  => 'Callback is empty!',
         );
     }
 
-    if (!$Self->LockMemory( LockFlag => LOCK_EX|LOCK_NB )) {
-        $Kernel::OM->Get('Kernel::System::Log')->Log(
-            Priority => 'error',
-            Message  => 'Shared memory already locked by another process!!!',
-        );
+    return if !$Self->LockMemory( LockFlag => LOCK_EX|LOCK_NB );
 
-        return;
-    }
-
-    my $Data = $Self->Fetch;
+    my $Data = $Self->Fetch();
 
     if (!$Data) {
         $Kernel::OM->Get('Kernel::System::Log')->Log(
+            PrometheusLog => 1,
             Priority => 'error',
             Message  => 'Prometheus::Guard can not change empty data!',
         );
@@ -88,6 +89,7 @@ sub Store {
 
     if ( !$Param{Data} ) {
         $Kernel::OM->Get('Kernel::System::Log')->Log(
+            PrometheusLog => 1,
             Priority => 'error',
             Message  => 'Data to store is empty! Please check param.',
         );
@@ -104,7 +106,7 @@ sub Store {
 sub Fetch {
     my ( $Self, %Param ) = @_;
 
-    my $EncodedData = $Self->{SharedMem}->fetch;
+    my $EncodedData = $Self->{SharedMem}->fetch();
     return unless $EncodedData;
 
     my $Data = $Self->{DECODER}->decode($EncodedData);
@@ -119,15 +121,7 @@ sub LockMemory {
 }
 
 sub UnlockMemory {
-    my ( $Self, %Param ) = @_;
-
-    $Self->{SharedMem}->unlock;
-}
-
-sub ClearMemory {
-    my $Self = shift;
-
-    $Self->{SharedMem}->destroy(1);
+    $_[0]->{SharedMem}->unlock();
 }
 
 1

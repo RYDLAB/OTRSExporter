@@ -23,21 +23,10 @@
             <Hash>
                 <Item ValueType="String" Key="SharedMemoryKey">1999</Item>
                 <Item ValueType="String" Key="ServerCMND">/usr/sbin/apache2 -k start</Item>
+
+                <Item ValueType="String" Key="AccessLogin">your_login_for_prometheus</Item>
+                <Item ValueType="String" Key="AccessPassword">your_password_for_prometheus</Item>
             </Hash>
-        </Value>
-    </Setting>
-
-    <-- Available prometheus metric types -->
-
-    <Setting Name="Prometheus::MetricTypes" Required="1" Valid="1">
-        <Description Translatable="1">Valid metric types for prometheus</Description>
-        <Value>
-            <Array>
-                <Item ValueType="String">counter</Item>
-                <Item ValueType="String">gauge</Item>
-                <Item ValueType="String">histogram</Item>
-                <Item ValueType="String">summary</Item>
-            </Array>
         </Value>
     </Setting>
 
@@ -50,15 +39,18 @@
                 <Item Key="HTTPRequestDurationSeconds" ValueType="Checkbox">1</Item>
                 <Item Key="HTTPResponseSizeBytes" ValueType="Checkbox">1</Item>
                 <Item Key="HTTPRequestsTotal" ValueType="Checkbox">1</Item>
+
                 <Item Key="OTRSIncomeMailTotal" ValueType="Checkbox">1</Item>
                 <Item Key="OTRSOutgoingMailTotal" ValueType="Checkbox">1</Item>
                 <Item Key="OTRSTicketTotal" ValueType="Checkbox">1</Item>
                 <Item Key="OTRSArticleTotal" ValueType="Checkbox">1</Item>
+                <Item Key="OTRSLogsTotal" ValueType="Checkbox">1</Item>
+
                 <Item Key="CacheOperations" ValueType="Checkbox">1</Item>
-                <Item Key="RecurrentTaskDuration" ValueType="Checkbox">1</Item>
-                <Item Key="RecurrentTaskSuccess" ValueType="Checkbox">1</Item>
+                <Item Key="RecurrentTasksMetrics" ValueType="Checkbox">1</Item>
                 <Item Key="HTTPProcessCollector" ValueType="Checkbox">1</Item>
                 <Item Key="DaemonProcessCollector" ValueType="Checkbox">1</Item>
+                <Item Key="DaemonSubworkersMetrics" ValueType="Checkbox">1</Item>
             </Hash>
         </Value>
     </Setting>
@@ -81,10 +73,24 @@
                         </Array>
                     </Item>
                     <Item Key="Description">Admin</Item>
-                    <Item Key="Title" Translatable="1">Prometheus</Item>
+                    <Item Key="Title" Translatable="1">Custom metrics</Item>
                     <Item Key="NavBarName">Admin</Item>
                 </Hash>
             </Item>
+        </Value>
+    </Setting>
+
+    <Setting Name="Loader::Module::AdminPrometheus###001-Framework" Required="0" Valid="1">
+        <Description Translatable="1">Loader module registration for the agent interface.</Description>
+        <Navigation>Frontend::Admin::ModuleRegistration::Loader</Navigation>
+        <Value>
+            <Hash>
+                <Item Key="JavaScript">
+                    <Array>
+                        <Item>Core.Agent.Admin.Prometheus.js</Item>
+                    </Array>
+                </Item>
+            </Hash>
         </Value>
     </Setting>
 
@@ -103,9 +109,9 @@
                     </Array>
                 </Item>
                 <Item Key="Module">Kernel::Output::HTML::NavBar::ModuleAdmin</Item>
-                <Item Key="Name" Translatable="1">Prometheus</Item>
+                <Item Key="Name" Translatable="1">Custom metrics</Item>
                 <Item Key="Block">Administration</Item>
-                <Item Key="Description" Translatable="1">Manage Prometheus and metrics</Item>
+                <Item Key="Description" Translatable="1">Manage prometheuses custom metrics</Item>
             </Hash>
         </Value>
     </Setting>
@@ -116,42 +122,6 @@
         <Description Translatable="1">Is custom metrics enabled?</Description>
         <Value>
             <Item ValueType="Checkbox">1</Item>
-        </Value>
-    </Setting>
-
-    <-- Example custom metric (Counter is not using buckets. It is here only for example) -->
-
-    <Setting Name="Prometheus::Metrics::Custom::Configuration" Required="0" Valid="1">
-        <Description Translatable="1">Custom metrics</Description>
-        <Value>
-            <Array>
-
-                <DefaultItem>
-                    <Hash>
-                        <DefaultItem>
-                            <Array><Item></Item></Array>
-                        </DefaultItem>
-                    </Hash>
-                </DefaultItem>
-
-                <Item>
-                    <Hash>
-                        <Item Key="Type"><Array><Item ValueType="String">Counter</Item></Array></Item>
-                        <Item Key="Namespace"><Array><Item ValueType="String">http</Item></Array></Item>
-                        <Item Key="Name"><Array><Item ValueType="String">upload_cache_total</Item></Array></Item>
-                        <Item Key="Help"><Array><Item ValueType="String">Uploaded cache</Item></Array></Item>
-                        <Item Key="Labels"><Array>
-                            <Item>label_1</Item>
-                        </Array></Item>
-                        <Item Key="Buckets"><Array>
-                            <Item>100</Item>
-                            <Item>1000</Item>
-                            <Item>10000</Item>
-                        </Array></Item>
-                    </Hash>
-                </Item>
-
-            </Array>
         </Value>
     </Setting>
 
@@ -184,6 +154,51 @@
                 <Item Key="Schedule">* * * * *</Item><!--each minute -->
                 <Item Key="Module">Kernel::System::Prometheus</Item>
                 <Item Key="Function">UpdateCustomSQLMetrics</Item>
+                <Item Key="MaximumParallelInstances">1</Item>
+                <Item Key="Params">
+                    <Array>
+                    </Array>
+                </Item>
+            </Hash>
+        </Value>
+    </Setting>
+
+    <Setting Name="Daemon::SchedulerCronTaskManager::Task###PrometheusClearDiedProcessCollectors" Required="0" Valid="1" ConfigLevel="100">
+        <Description Translatable="1">
+            Delete process collectors for died processes. For example:
+            We collecting information(memory, cpu seconds ...) about process with pid 1234
+            But once process 1234 was died, so we do not have to have information about this
+            collector in shared memory. This method delete all collectors for died processes
+        </Description>
+        <Navigation>Daemon::SchedulerCronTaskManager::Task</Navigation>
+        <Value>
+            <Hash>
+                <Item Key="TaskName">PrometheusClearDiedProcessCollectors</Item>
+                <Item Key="Schedule">* * * * *</Item><!--each minute -->
+                <Item Key="Module">Kernel::System::Prometheus</Item>
+                <Item Key="Function">ClearDiedProcessCollectors</Item>
+                <Item Key="MaximumParallelInstances">1</Item>
+                <Item Key="Params">
+                    <Array>
+                    </Array>
+                </Item>
+            </Hash>
+        </Value>
+    </Setting>
+
+    <Setting Name="Daemon::SchedulerCronTaskManager::Task###PrometheusClearValuesWithDiedPids" Required="0" Valid="1" ConfigLevel="100">
+        <Description Translatable="1">
+            Delete values with died workers as label. For example:
+                http_requests_total{host="...", worker="1234"} ...
+            Process with pid 1234 already doesn't exists, so we delete this metric value
+        </Description>
+        <Navigation>Daemon::SchedulerCronTaskManager::Task</Navigation>
+        <Value>
+            <Hash>
+                <Item Key="TaskName">PrometheusClearValuesWithDiedPids</Item>
+                <Item Key="Schedule">0 * * * *</Item><!--each minute -->
+                <Item Key="Module">Kernel::System::Prometheus</Item>
+                <Item Key="Function">ClearValuesWithDiedPids</Item>
                 <Item Key="MaximumParallelInstances">1</Item>
                 <Item Key="Params">
                     <Array>

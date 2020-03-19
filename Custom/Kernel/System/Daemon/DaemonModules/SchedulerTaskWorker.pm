@@ -133,7 +133,7 @@ sub Run {
     my ( $Self, %Param ) = @_;
 
     if ($Kernel::OM->Get('Kernel::System::Prometheus::MetricManager')->IsMetricEnabled('DaemonProcessCollector')) {
-        my $Host = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost;
+        my $Host = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost();
         $Kernel::OM->Get('Kernel::System::Prometheus')->NewProcessCollector(
             PID    => $$,
             Prefix => 'daemon_process',
@@ -240,11 +240,37 @@ sub Run {
                 exit 1;
             }
 
+            # detect task execution time
+            $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->StartCountdown;
+
             $TaskHandlerObject->Run(
                 TaskID   => $TaskID,
                 TaskName => $Task{Name} || '',
                 Data     => $Task{Data},
             );
+
+            if ( $Kernel::OM->Get('Kernel::System::Prometheus::MetricManager')->IsMetricEnabled('DaemonSubworkersMetrics') ) {
+                my $PrometheusObject = $Kernel::OM->Get('Kernel::System::Prometheus');
+                my $Host = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost;
+                my $ExecutionTime = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetCountdown;
+
+                $PrometheusObject->Change(
+                    Callback => sub {
+                        my $Metrics = shift;
+
+                        $Metrics->{DaemonSubworkersTotal}->inc(
+                            $Host, $Task{Type}, $Task{Name} || 'nameless',
+                        );
+
+                        $Metrics->{DaemonSubworkersLastExecutionTime}->set(
+                            $Host, $Task{Type}, $Task{Name} || 'nameless', $ExecutionTime,
+                        );
+
+                        return 1;
+                    }
+                );
+
+            }
 
             # Force transactional events to run by discarding all objects before deleting the task.
             $Kernel::OM->ObjectEventsHandle();

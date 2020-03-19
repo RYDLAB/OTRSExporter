@@ -6,7 +6,7 @@
 # did not receive this file, see https://www.gnu.org/licenses/gpl-3.0.txt.
 # --
 
-package Kernel::System::Console::Command::Maint::Prometheus::ClearMemory;
+package Kernel::System::Console::Command::Maint::Prometheus::MergeCustomMetrics;
 
 use strict;
 use warnings;
@@ -20,7 +20,7 @@ our @ObjectDependencies = (
 sub Configure {
     my ( $Self, %Param ) = @_;
 
-    $Self->Description("Clear the prometheus guard shared memory");
+    $Self->Description("Merge custom metrics to shared memory");
 
     return;
 }
@@ -28,9 +28,9 @@ sub Configure {
 sub Run {
     my ( $Self, %Param ) = @_;
 
-    $Self->Print("<yellow>Clearing the prometheus guard shared memory...</yellow>\n");
+    $Self->Print("<yellow>Merging custom metric...</yellow>\n");
 
-    $Kernel::OM->Get('Kernel::System::Prometheus')->ClearMemory();
+    $Kernel::OM->Get('Kernel::System::Prometheus')->MergeCustomMetrics();
 
     $Self->Print("<green>Done.</green>\n");
     return $Self->ExitCodeOk();

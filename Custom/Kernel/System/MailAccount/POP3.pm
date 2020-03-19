@@ -502,7 +502,7 @@ sub Fetch {
         && $Kernel::OM->Get('Kernel::System::Prometheus::MetricManager')->IsMetricEnabled('OTRSIncomeMailTotal')
         )
     {
-        my $Host = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost;
+        my $Host = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost();
         $Kernel::OM->Get('Kernel::System::Prometheus')->Change(
             Callback => sub {
                 my $Metrics = shift;

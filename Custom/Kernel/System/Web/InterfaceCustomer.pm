@@ -1318,8 +1318,8 @@ sub Run {
             use bytes;
 
             my $PrometheusObject = $Kernel::OM->Get('Kernel::System::Prometheus');
-            my $Host = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost;
-            my $ElapsedTime = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetCountdown;
+            my $Host = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost();
+            my $ElapsedTime = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetCountdown();
 
             my $Route = "Action=$Param{Action}";
             $Route .= "Subaction=$Param{Subaction}" if $Param{Subaction};
