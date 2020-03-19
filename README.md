@@ -140,6 +140,20 @@ scrape_configs:
 As metric path you should speciify the route to our operation.
 As target you should specify host for otrs
 
+## Basic auth
+
+In your web-server for OTRS you can specify auth for metrics route using documetation for your server.
+
+If you did it, you can add to Prometheus configuration file option for basic auth:
+
+```
+basic_auth:
+  [ username: <string> ]
+  [ password: <secret> ]
+  [ password_file: <string> ]
+```
+
+
 ## Grafana dashboards
 
 With package were installed example dasbhoards for grafana to $OTRS_HOME/doc/GrafanaExamples/
