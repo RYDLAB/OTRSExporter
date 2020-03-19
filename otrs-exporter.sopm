@@ -33,18 +33,23 @@
     <OS>linux</OS>
     <Filelist>
         <File Permission="644" Location="Kernel/Modules/AdminPrometheus.pm"></File>
+        <File Permission="644" Location="Kernel/Modules/AdminGenericInterfaceTransportHTTPSendText.pm"></File>
         <File Permission="644" Location="Kernel/Output/HTML/Templates/Standard/MetricForm.tt"></File>
         <File Permission="644" Location="Kernel/Output/HTML/Templates/Standard/AdminPrometheus.tt"></File>
         <File Permission="644" Location="Kernel/Output/HTML/Templates/Standard/AdminPrometheusChangeMetric.tt"></File>
         <File Permission="644" Location="Kernel/Output/HTML/Templates/Standard/AdminPrometheusCreateMetric.tt"></File>
+        <File Permission="644" Location="Kernel/Output/HTML/Templates/Standard/AdminGenericInterfaceTransportHTTPSendText.tt"></File>
         <File Permission="644" Location="Kernel/GenericInterface/Operation/Prometheus/MetricGet.pm"></File>
         <File Permission="644" Location="Kernel/GenericInterface/Transport/HTTP/SendText.pm"></File>
         <File Permission="644" Location="Kernel/Config/Files/XML/SendTextGenericInterface.xml"></File>
-        <File Permission="644" Location="Kernel/Config/Files/XML/PrometheusGenericInterface.xml"></File>
+        <File Permission="644" Location="Kernel/Config/Files/XML/Prometheus.xml"></File>
         <File Permission="644" Location="Kernel/System/Prometheus/Guard.pm"></File>
         <File Permission="644" Location="Kernel/System/Prometheus/Helper.pm"></File>
         <File Permission="644" Location="Kernel/System/Prometheus/MetricManager.pm"></File>
         <File Permission="644" Location="Kernel/System/Console/Command/Maint/Prometheus/ClearMemory.pm"></File>
+        <File Permission="644" Location="Kernel/System/Console/Command/Maint/Prometheus/DeleteDiedProcessCollectors.pm"></File>
+        <File Permission="644" Location="Kernel/System/Console/Command/Maint/Prometheus/DeleteValuesWithDiedPIDs.pm"></File>
+        <File Permission="644" Location="Kernel/System/Console/Command/Maint/Prometheus/MergeCustomMetrics.pm"></File>
         <File Permission="644" Location="Kernel/System/Prometheus.pm"></File>
 
         <File Permission="644" Location="Custom/Kernel/GenericInterface/Provider.pm"></File>
@@ -64,6 +69,7 @@
         <File Permission="644" Location="Custom/Kernel/System/Daemon/DaemonModules/SchedulerFutureTaskManager.pm"></File>
 
         <File Permission="644" Location="var/httpd/htdocs/js/Core.Agent.Admin.Prometheus.js"></File>
+        <File Permission="644" Location="var/httpd/htdocs/js/Core.Agent.Admin.GenericInterfaceTransportHTTPSendText.js"></File>
 
         <File Permission="644" Location="doc/GrafanaExamples/dashboard-otrs.json"></File>
         <File Permission="644" Location="doc/GrafanaExamples/dashboard-web.json"></File>
