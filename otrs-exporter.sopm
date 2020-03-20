@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <otrs_package version="1.0">
     <Name>OTRS-Exporter</Name>
-    <Version>0.0.1</Version>
+    <Version>0.0.2</Version>
     <Framework>6.x.x</Framework>
     <Vendor>OTRS AG</Vendor>
     <URL>https://otrs.com</URL>
@@ -17,6 +17,7 @@
         Then you can configurate your Prometheus and Grafana servers using our example dashboards at $OTRS_HOME/doc/GrafanaExamples/
     </IntroInstall>
     <ChangeLog Version="0.0.1" Date="2020-02-16 17:00:00">First release</ChangeLog>
+    <ChangeLog Version="0.0.2" Date="2020-02-20 12:00:00">Modified Net::Prometheus::ProcessCollector::linux to resolve problem with BOOTTIME</ChangeLog>
     <PackageIsVisible>1</PackageIsVisible>
     <PackageIsDownloadable>1</PackageIsDownloadable>
     <PackageIsRemovable>1</PackageIsRemovable>
@@ -70,6 +71,8 @@
 
         <File Permission="644" Location="var/httpd/htdocs/js/Core.Agent.Admin.Prometheus.js"></File>
         <File Permission="644" Location="var/httpd/htdocs/js/Core.Agent.Admin.GenericInterfaceTransportHTTPSendText.js"></File>
+
+        <File Permission="644" Location="Kernel/cpan-lib/Net/Prometheus/ProcessCollector/linux.pm"></File>
 
         <File Permission="644" Location="doc/GrafanaExamples/dashboard-otrs.json"></File>
         <File Permission="644" Location="doc/GrafanaExamples/dashboard-web.json"></File>
