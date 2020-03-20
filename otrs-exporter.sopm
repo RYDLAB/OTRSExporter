@@ -52,13 +52,13 @@
         <File Permission="644" Location="Kernel/System/Console/Command/Maint/Prometheus/DeleteValuesWithDiedPIDs.pm"></File>
         <File Permission="644" Location="Kernel/System/Console/Command/Maint/Prometheus/MergeCustomMetrics.pm"></File>
         <File Permission="644" Location="Kernel/System/Prometheus.pm"></File>
-
         <File Permission="644" Location="Custom/Kernel/GenericInterface/Provider.pm"></File>
         <File Permission="644" Location="Custom/Kernel/System/Cache.pm"></File>
         <File Permission="644" Location="Custom/Kernel/System/MailAccount/IMAP.pm"></File>
         <File Permission="644" Location="Custom/Kernel/System/MailAccount/IMAPTLS.pm"></File>
         <File Permission="644" Location="Custom/Kernel/System/MailAccount/POP3.pm"></File>
         <File Permission="644" Location="Custom/Kernel/System/Email.pm"></File>
+        <File Permission="644" Location="Custom/Kernel/System/Log.pm"></File>
         <File Permission="644" Location="Custom/Kernel/System/Web/InterfaceAgent.pm"></File>
         <File Permission="644" Location="Custom/Kernel/System/Web/InterfaceCustomer.pm"></File>
         <File Permission="644" Location="Custom/Kernel/System/Web/InterfacePublic.pm"></File>
@@ -68,12 +68,9 @@
         <File Permission="644" Location="Custom/Kernel/System/Daemon/DaemonModules/SchedulerCronTaskManager.pm"></File>
         <File Permission="644" Location="Custom/Kernel/System/Daemon/DaemonModules/SystemConfigurationSyncManager.pm"></File>
         <File Permission="644" Location="Custom/Kernel/System/Daemon/DaemonModules/SchedulerFutureTaskManager.pm"></File>
-
         <File Permission="644" Location="var/httpd/htdocs/js/Core.Agent.Admin.Prometheus.js"></File>
         <File Permission="644" Location="var/httpd/htdocs/js/Core.Agent.Admin.GenericInterfaceTransportHTTPSendText.js"></File>
-
         <File Permission="644" Location="Kernel/cpan-lib/Net/Prometheus/ProcessCollector/linux.pm"></File>
-
         <File Permission="644" Location="doc/GrafanaExamples/dashboard-otrs.json"></File>
         <File Permission="644" Location="doc/GrafanaExamples/dashboard-web.json"></File>
         <File Permission="644" Location="doc/GrafanaExamples/dashboard-http-server.json"></File>
