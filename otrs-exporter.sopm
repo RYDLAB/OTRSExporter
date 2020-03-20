@@ -9,7 +9,7 @@
     <Description Lang="en">A prometheus module for OTRS</Description>
     <IntroInstall Type="pre" Lang="en" Title="Needed packages">
         To use OTRS exporter you will need a few packages:
-            Net::Prometheus Time::HiRes List::Util Scalar::Util Proc::ProcessTable Proc::Exists IPC::ShareLite Sereal
+            Time::HiRes List::Util Scalar::Util Proc::ProcessTable Proc::Exists IPC::ShareLite Sereal
         You can install them using cpanminus
     </IntroInstall>
     <IntroInstall Type="post" Lang="en" Title="Thank you for installing OTRS exporter!">
@@ -18,12 +18,12 @@
     </IntroInstall>
     <ChangeLog Version="0.0.1" Date="2020-02-16 17:00:00">First release</ChangeLog>
     <ChangeLog Version="0.0.2" Date="2020-02-20 12:00:00">Modified Net::Prometheus::ProcessCollector::linux to resolve problem with BOOTTIME</ChangeLog>
+    <ChangeLog Version="0.0.3" Date="2020-02-20 16:00:00">Custom Net::Prometheus now come with package</ChangeLog>
     <PackageIsVisible>1</PackageIsVisible>
     <PackageIsDownloadable>1</PackageIsDownloadable>
     <PackageIsRemovable>1</PackageIsRemovable>
     <BuildDate>?</BuildDate>
     <BuildHost>?</BuildHost>
-    <ModuleRequired Version="0.07">Net::Prometheus</ModuleRequired>
     <ModuleRequired Version="1">Time::HiRes</ModuleRequired>
     <ModuleRequired Version="1">List::Util</ModuleRequired>
     <ModuleRequired Version="1">Scalar::Util</ModuleRequired>
@@ -70,7 +70,15 @@
         <File Permission="644" Location="Custom/Kernel/System/Daemon/DaemonModules/SchedulerFutureTaskManager.pm"></File>
         <File Permission="644" Location="var/httpd/htdocs/js/Core.Agent.Admin.Prometheus.js"></File>
         <File Permission="644" Location="var/httpd/htdocs/js/Core.Agent.Admin.GenericInterfaceTransportHTTPSendText.js"></File>
+        <File Permission="644" Location="Kernel/cpan-lib/Net/Prometheus/Histogram.pm"></File>
         <File Permission="644" Location="Kernel/cpan-lib/Net/Prometheus/ProcessCollector/linux.pm"></File>
+        <File Permission="644" Location="Kernel/cpan-lib/Net/Prometheus/Gauge.pm"></File>
+        <File Permission="644" Location="Kernel/cpan-lib/Net/Prometheus/Counter.pm"></File>
+        <File Permission="644" Location="Kernel/cpan-lib/Net/Prometheus/Types.pm"></File>
+        <File Permission="644" Location="Kernel/cpan-lib/Net/Prometheus/ProcessCollector.pm"></File>
+        <File Permission="644" Location="Kernel/cpan-lib/Net/Prometheus/Summary.pm"></File>
+        <File Permission="644" Location="Kernel/cpan-lib/Net/Prometheus/Metric.pm"></File>
+        <File Permission="644" Location="Kernel/cpan-lib/Net/Prometheus.pm"></File>
         <File Permission="644" Location="doc/GrafanaExamples/dashboard-otrs.json"></File>
         <File Permission="644" Location="doc/GrafanaExamples/dashboard-web.json"></File>
         <File Permission="644" Location="doc/GrafanaExamples/dashboard-http-server.json"></File>
