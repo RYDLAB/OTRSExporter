@@ -3,7 +3,7 @@
 ## Description
 
 OTRS exporter - is OTRS module for monitoring system 'Prometheus'. With this module
-you can track your system and OTRS performance.
+you can track your system activity and OTRS performance.
 
 The following metrics are now available:
 
@@ -68,7 +68,7 @@ In block 'actions' load OTRS-Exporter.opm file and then click 'Install package'.
 ### System configuration
 
 After installing OPM package, we should set few options in OTRS system configuration.
-Go to OTRS system configuration page(http://localhost/otrs/index.pl?Action=AdminSystemConfiguration).
+Go to OTRS system configuration page (http://localhost/otrs/index.pl?Action=AdminSystemConfiguration).
 In search box enter 'Prometheus::Settings'. Set the value of ServerCMND to yours. This value you can find using ps command. ServerCMND is name of your main http process.
 
 ### Creating Web-service for Prometheus
@@ -79,7 +79,7 @@ Enter some name('Prometheus' for example), and in block OTRS as provider as netw
 Now add new operation for Prometheus::MetricGet. Insert name, save and finish. Then configure network transport: for created operation add route by which prometheus will come. Save
 and finish.
 
-The URL with metrics will looks like this: http://host/otrs/nph-genericinterface.pl/Webservice/@WebserviceName/@OperationRoute.
+The URL with metrics will looks like this: http://host/otrs/nph-genericinterface.pl/Webservice/$WebserviceName/$OperationRoute.
 
 ## Custom metrics
 
@@ -111,10 +111,10 @@ otrs.Daemon restart
 
 There are several new console commands:
 
-*  `Maint::Prometheus::ClearMemory` -- Same as clear shared memory at custom-metrics-web-page
-*  `Maint::Prometheus::DleteDiedProcessCollectors` -- Delete collectors of for died processes
-*  `Maint::Prometheus::DeleteValuesWithDiedPIDs` -- Delete the metric values with died workers as label
-*  `Maint::Prometheus::MergeCustomMetrics` -- Merge custom metrics to shared memory (same as deploy)
+*  `Maint::Prometheus::ClearMemory`                 - Same as clear shared memory at custom-metrics-web-page
+*  `Maint::Prometheus::DeleteDiedProcessCollectors` - Delete collectors for died processes
+*  `Maint::Prometheus::DeleteValuesWithDiedPIDs`    - Delete the metric values with died workers as label
+*  `Maint::Prometheus::MergeCustomMetrics`          - Merge custom metrics to shared memory (same as deploy)
 
 
 # Prometheus
@@ -158,4 +158,4 @@ basic_auth:
 
 With package were installed example dasbhoards for grafana to $OTRS_HOME/doc/GrafanaExamples/
 
-You can import them at your grafana-server
+You can import them to your grafana-server
