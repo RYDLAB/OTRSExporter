@@ -16,7 +16,7 @@ use Net::Prometheus::ProcessCollector::linux;
 use Kernel::System::VariableCheck qw( IsArrayRefWithData IsHashRefWithData );
 use Proc::ProcessTable;
 use Proc::Exists qw(pexists);
-use List::Util qw(any first);
+use List::Util qw( any first );
 
 our @ObjectDependencies = (
     'Kernel::System::Prometheus::MetricManager',
@@ -42,22 +42,49 @@ sub new {
             Priority => 'error',
             Message  => 'Can\'t load prometheus settings! Did you create config file?',
         );
+
+        return;
     }
 
-    $Self->{Guard} = $Kernel::OM->Create(
-        'Kernel::System::Prometheus::Guard',
-        ObjectParams => {
-            SHAREDKEY   => $Self->{Settings}{SharedMemoryKey},
-            DestroyFlag => 0,
+    # Get guard type
+    if ($Self->{Settings}{Guard}) {
+        my $GenericModule = 'Kernel::System::Prometheus::Guard::' . $Self->{Settings}{Guard};
+        return if !$Kernel::OM->Get('Kernel::System::Main')->Require($GenericModule);
+
+        if ( $Self->{Settings}{Guard} eq 'SHM' ) {
+            $Self->{Guard} = $Kernel::OM->Create(
+                $GenericModule,
+                ObjectParams => {
+                    SHAREDKEY   => $Self->{Settings}{SharedMemoryKey},
+                    DestroyFlag => 0,
+                },
+            );
         }
-    );
+
+        else {
+            $Self->{Guard} = $Kernel::OM->Get($GenericModule);
+        }
+    }
+
+    else {
+        $Kernel::OM->Get('Kernel::System::Log')->Log(
+            PrometheusLog => 1,
+            Priority => 'error',
+            Message  => 'Can\'t load prometheus guard setting!',
+        );
+
+        return;
+    }
+
 
     if (!$Self->{PrometheusObject}) {
         $Kernel::OM->Get('Kernel::System::Log')->Log(
             PrometheusLog => 1,
             Priority => 'error',
             Message  => 'Can\'t create prometheus object!',
-        )
+        );
+
+        return;
     }
 
     if (!IsHashRefWithData( $Self->{Guard}->Fetch() )) {

@@ -21,8 +21,8 @@ our @ObjectDependencies = (
     'Kernel::Config',
     'Kernel::System::Encode',
     'Kernel::System::Prometheus',
-    'Kernel::System::MetricManager',
-    'Kernel::System::Helper',
+    'Kernel::System::Prometheus::MetricManager',
+    'Kernel::System::Prometheus::Helper',
 );
 
 =head1 NAME
@@ -191,6 +191,7 @@ sub Log {
 
     if( 
         !$Param{PrometheusLog}
+        && $Subroutine2 !~ /Prometheus/i
         && $Kernel::OM->Get('Kernel::System::Prometheus::MetricManager')->IsMetricEnabled('OTRSLogsTotal')
     )
     {

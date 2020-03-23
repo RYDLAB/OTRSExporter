@@ -23,6 +23,10 @@
             <Hash>
                 <Item ValueType="String" Key="SharedMemoryKey">1999</Item>
                 <Item ValueType="String" Key="ServerCMND">/usr/sbin/apache2 -k start</Item>
+                <Item ValueType="Select" Key="Guard" SelectedID="Cache">
+                    <Item ValueType="Option" Value="Cache" Translatable="1">Cache</Item>
+                    <Item ValueType="Option" Value="SHM" Translatable="1">Shared memory</Item>
+                </Item>
             </Hash>
         </Value>
     </Setting>

@@ -430,6 +430,7 @@ sub CleanUp {
 
 sub DESTROY {
     return if !$Kernel::OM->Get('Kernel::System::Prometheus::MetricManager')->IsMetricEnabled('CacheOperations');
+    return if $Kernel::OM->Get('Kernel::System::Prometheus')->{Guard}->isa('Kernel::System::Prometheus::Guard::Cache');
 
     my $PrometheusObject = $Kernel::OM->Get('Kernel::System::Prometheus');
     my $HelperObject     = $Kernel::OM->Get('Kernel::System::Prometheus::Helper');
