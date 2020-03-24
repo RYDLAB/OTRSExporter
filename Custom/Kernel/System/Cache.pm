@@ -461,7 +461,7 @@ sub DESTROY {
         Callback => sub {
             my $Metrics = shift;
             for my $CounterName (qw( Get GetSuccess Set Delete )) {
-                warn $Metrics->{CacheOperations}->inc(
+                $Metrics->{CacheOperations}->inc(
                     $Host, $CounterName, $ValuesToUpdate{ $CounterName },
                 );
             }

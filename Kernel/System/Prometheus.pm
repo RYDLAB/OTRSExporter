@@ -543,7 +543,7 @@ sub _CreateMetrics {
 
     my $Metrics = $MetricManager->CreateDefaultMetrics();
 
-    if ($MetricManager->IsCustomMetricsEnabled) {
+    if ($MetricManager->IsCustomMetricsEnabled()) {
         my $CustomMetrics = $MetricManager->CreateCustomMetrics();
         for my $CustomMetricName ( keys %$CustomMetrics ) {
             $Metrics->{$CustomMetricName} = $CustomMetrics->{$CustomMetricName};

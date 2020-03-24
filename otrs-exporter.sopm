@@ -1,24 +1,37 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <otrs_package version="1.0">
     <Name>OTRS-Exporter</Name>
-    <Version>0.0.2</Version>
+    <Version>0.0.4</Version>
     <Framework>6.x.x</Framework>
-    <Vendor>OTRS AG</Vendor>
-    <URL>https://otrs.com</URL>
+    <Vendor>Rydlab</Vendor>
+    <URL>https://rydlab.ru/</URL>
     <License>GNU GENERAL PUBLIC LICENSE Version 3, 29 June 2007</License>
     <Description Lang="en">A prometheus module for OTRS</Description>
+    <Description Lang="ru">Модуль для системы сбора метрик 'Prometheus'</Description>
     <IntroInstall Type="pre" Lang="en" Title="Needed packages">
         To use OTRS exporter you will need a few packages:
             Time::HiRes List::Util Scalar::Util Proc::ProcessTable Proc::Exists IPC::ShareLite Sereal
         You can install them using cpanminus
     </IntroInstall>
+    <IntroInstall Type="pre" Lang="ru" Title="Зависимости">
+        Перед установкой пакета, вам необходима загрузить или обновить следующие пакеты:
+            Time::HiRes List::Util Scalar::Util Proc::ProcessTable Proc::Exists IPC::ShareLite Sereal
+        Вы можете установить их используя cpanminus
+    </IntroInstall>
     <IntroInstall Type="post" Lang="en" Title="Thank you for installing OTRS exporter!">
         Thank you for installing OTRS exporter! Now you can create a new web-service using HTTP::Sendtext transport module and Prometheus::MetricGet operation!
         Then you can configurate your Prometheus and Grafana servers using our example dashboards at $OTRS_HOME/doc/GrafanaExamples/
     </IntroInstall>
+    <IntroInstall Type="post" Lang="ru" Title="Спасибо за установку OTRS exporter!">
+        Спасибо за установку OTRS exporter! Теперь вы можете создать новый веб-сервис, используя транспортный модуль HTTP::Sendtext и Prometheus::MetricGet операцию!
+        Затем вы можете настроить ваши Prometheus и Grafana сервера, используя образцы дашбоардов в $OTRS_HOME/doc/GrafanaExamples/.
+    </IntroInstall>
     <ChangeLog Version="0.0.1" Date="2020-02-16 17:00:00">First release</ChangeLog>
     <ChangeLog Version="0.0.2" Date="2020-02-20 12:00:00">Modified Net::Prometheus::ProcessCollector::linux to resolve problem with BOOTTIME</ChangeLog>
-    <ChangeLog Version="0.0.3" Date="2020-02-20 16:00:00">Custom Net::Prometheus now come with package</ChangeLog>
+    <ChangeLog Version="0.0.3" Date="2020-02-22 16:00:00">Custom Net::Prometheus now come with package</ChangeLog>
+    <ChangeLog Version="0.0.4" Date="2020-02-24 10:00:00">
+        Added guard::cache to use cache-memory instead shared. Updated configuration files. Renamed database tables to avoid warnings ( too long names )
+    </ChangeLog>
     <PackageIsVisible>1</PackageIsVisible>
     <PackageIsDownloadable>1</PackageIsDownloadable>
     <PackageIsRemovable>1</PackageIsRemovable>
@@ -45,6 +58,8 @@
         <File Permission="644" Location="Kernel/Config/Files/XML/SendTextGenericInterface.xml"></File>
         <File Permission="644" Location="Kernel/Config/Files/XML/Prometheus.xml"></File>
         <File Permission="644" Location="Kernel/System/Prometheus/Guard.pm"></File>
+        <File Permission="644" Location="Kernel/System/Prometheus/Guard/SHM.pm"></File>
+        <File Permission="644" Location="Kernel/System/Prometheus/Guard/Cache.pm"></File>
         <File Permission="644" Location="Kernel/System/Prometheus/Helper.pm"></File>
         <File Permission="644" Location="Kernel/System/Prometheus/MetricManager.pm"></File>
         <File Permission="644" Location="Kernel/System/Console/Command/Maint/Prometheus/ClearMemory.pm"></File>
@@ -85,85 +100,85 @@
         <File Permission="644" Location="doc/GrafanaExamples/dashboard-daemon.json"></File>
     </Filelist>
     <DatabaseInstall>
-        <TableCreate Name="prometheus_metric_types">
+        <TableCreate Name="metric_types">
             <Column Name="id" Required="true" PrimaryKey="true" AutoIncrement="true" Type="SMALLINT"/>
             <Column Name="type_name" Required="true" Size="256" Type="VARCHAR"/>
-            <Unique Name="prometheus_metric_type_name">
+            <Unique Name="metric_type_name">
                 <UniqueColumn Name="type_name"/>
             </Unique>
         </TableCreate>
 
-        <TableCreate Name="prometheus_metric_update_methods">
+        <TableCreate Name="metric_update_methods">
             <Column Name="id" Required="true" PrimaryKey="true" AutoIncrement="true" Type="SMALLINT"/>
             <Column Name="metric_type_id" Required="true" Type="SMALLINT"/>
             <Column Name="name" Required="true" Size="256" Type="VARCHAR"/>
-            <ForeignKey ForeignTable="prometheus_metric_types">
+            <ForeignKey ForeignTable="metric_types">
                 <Reference Local="metric_type_id" Foreign="id"/>
             </ForeignKey>
         </TableCreate>
 
-        <TableCreate Name="prometheus_custom_metrics">
+        <TableCreate Name="custom_metrics">
             <Column Name="id" Required="true" PrimaryKey="true" AutoIncrement="true" Type="BIGINT"/>
             <Column Name="namespace" Required="false" Size="256" Type="VARCHAR"/>
             <Column Name="name" Required="true" Size="256" Type="VARCHAR"/>
             <Column Name="help" Required="true" Size="1000" Type="VARCHAR"/>
             <Column Name="metric_type_id" Required="true" Type="SMALLINT"/>
-            <Unique Name="prometheus_custom_metric_name">
+            <Unique Name="custom_metric_name">
                 <UniqueColumn Name="name"/>
             </Unique>
-            <ForeignKey ForeignTable="prometheus_metric_types">
+            <ForeignKey ForeignTable="metric_types">
                 <Reference Local="metric_type_id" Foreign="id"/>
             </ForeignKey>
         </TableCreate>
 
-        <TableCreate Name="prometheus_custom_metric_labels">
+        <TableCreate Name="custom_metric_labels">
             <Column Name="id" Required="true" PrimaryKey="true" AutoIncrement="true" Type="BIGINT"/>
             <Column Name="name" Required="true" Size="256" Type="VARCHAR"/>
             <Column Name="custom_metric_id" Required="true" Type="BIGINT"/>
             <Column Name="queue_num" Required="true" Type="INTEGER"/>
-            <ForeignKey ForeignTable="prometheus_custom_metrics">
+            <ForeignKey ForeignTable="custom_metrics">
                 <Reference Local="custom_metric_id" Foreign="id"/>
             </ForeignKey>
         </TableCreate>
 
-        <TableCreate Name="prometheus_custom_metric_buckets">
+        <TableCreate Name="custom_metric_buckets">
             <Column Name="id" Required="true" PrimaryKey="true" AutoIncrement="true" Type="BIGINT"/>
             <Column Name="custom_metric_id" Required="true" Type="BIGINT"/>
             <Column Name="value" Required="true" Type="BIGINT"/>
-            <ForeignKey ForeignTable="prometheus_custom_metrics">
+            <ForeignKey ForeignTable="custom_metrics">
                 <Reference Local="custom_metric_id" Foreign="id"/>
             </ForeignKey>
         </TableCreate>
 
-        <TableCreate Name="prometheus_custom_metric_sql">
+        <TableCreate Name="custom_metric_sql">
             <Column Name="id" Required="true" PrimaryKey="true" AutoIncrement="true" Type="BIGINT"/>
             <Column Name="query_text" Required="true" Size="2000" Type="VARCHAR"/>
             <Column Name="custom_metric_id" Required="true" Type="BIGINT"/>
             <Column Name="update_method_id" Required="true" Type="SMALLINT"/>
-            <ForeignKey ForeignTable="prometheus_custom_metrics">
+            <ForeignKey ForeignTable="custom_metrics">
                 <Reference Local="custom_metric_id" Foreign="id"/>
             </ForeignKey>
-            <ForeignKey ForeignTable="prometheus_metric_update_methods">
+            <ForeignKey ForeignTable="metric_update_methods">
                 <Reference Local="update_method_id" Foreign="id"/>
             </ForeignKey>
         </TableCreate>
     </DatabaseInstall>
     <DatabaseUninstall>
-        <TableDrop Name="prometheus_custom_metric_sql"/>
-        <TableDrop Name="prometheus_custom_metric_buckets"/>
-        <TableDrop Name="prometheus_custom_metric_labels"/>
-        <TableDrop Name="prometheus_custom_metrics"/>
-        <TableDrop Name="prometheus_metric_update_methods"/>
-        <TableDrop Name="prometheus_metric_types"/>
+        <TableDrop Name="custom_metric_sql"/>
+        <TableDrop Name="custom_metric_buckets"/>
+        <TableDrop Name="custom_metric_labels"/>
+        <TableDrop Name="custom_metrics"/>
+        <TableDrop Name="metric_update_methods"/>
+        <TableDrop Name="metric_types"/>
     </DatabaseUninstall>
     <CodeInstall><![CDATA[
         $Kernel::OM->Get('Kernel::System::DB')->Do(
-            SQL => "INSERT INTO prometheus_metric_types(id, type_name) VALUES
+            SQL => "INSERT INTO metric_types(id, type_name) VALUES
                      (1, 'counter'), (2, 'gauge'),(3, 'histogram'),(4, 'summary')",
         );
 
         $Kernel::OM->Get('Kernel::System::DB')->Do(
-            SQL => "INSERT INTO prometheus_metric_update_methods(metric_type_id, name) VALUES
+            SQL => "INSERT INTO metric_update_methods(metric_type_id, name) VALUES
                       (1, 'inc'),
                       (2, 'inc'), (2, 'set'), (2, 'dec'),
                       (3, 'observe'),

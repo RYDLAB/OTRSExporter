@@ -16,7 +16,9 @@ use parent 'Kernel::System::Prometheus::Guard';
 use IPC::ShareLite qw(:lock);
 use Sereal qw( get_sereal_decoder get_sereal_encoder );
 
-our @ObjectDependencies = ();
+our @ObjectDependencies = (
+    'Kernel::System::Log',
+);
 
 sub new {
     my ( $Type, %Param ) = @_;
