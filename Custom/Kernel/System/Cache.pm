@@ -208,7 +208,9 @@ value:
 sub Set {
     my ( $Self, %Param ) = @_;
 
-    ${ $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetTempValue( ValueName => 'Set' ) }++;
+    if ( $Param{Type} ne 'PrometheusCache' ) {
+        ${ $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetTempValue( ValueName => 'Set' ) }++;
+    }
 
     for my $Needed (qw(Type Key Value)) {
         if ( !defined $Param{$Needed} ) {
@@ -294,7 +296,9 @@ value:
 sub Get {
     my ( $Self, %Param ) = @_;
 
-    ${ $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetTempValue( ValueName => 'Get' ) }++;
+    if ( $Param{Type} ne 'PrometheusCache' ) {
+        ${ $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetTempValue( ValueName => 'Get' ) }++;
+    }
 
     for my $Needed (qw(Type Key)) {
         if ( !$Param{$Needed} ) {
@@ -309,7 +313,10 @@ sub Get {
     # check in-memory cache
     if ( $Self->{CacheInMemory} && ( $Param{CacheInMemory} // 1 ) ) {
         if ( exists $Self->{Cache}->{ $Param{Type} }->{ $Param{Key} } ) {
-            ${ $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetTempValue( ValueName => 'GetSuccess' ) }++;
+            if ( $Param{Type} ne 'PrometheusCache' ) {
+                ${ $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetTempValue( ValueName => 'GetSuccess' ) }++;
+            }
+
             return $Self->{Cache}->{ $Param{Type} }->{ $Param{Key} };
         }
     }
@@ -321,7 +328,10 @@ sub Get {
 
     # set in-memory cache
     if ( defined $Value ) {
-        ${ $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetTempValue( ValueName => 'GetSuccess' ) }++;
+        if ( $Param{Type} ne 'PrometheusCache' ) {
+            ${ $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetTempValue( ValueName => 'GetSuccess' ) }++;
+        }
+
         if ( $Self->{CacheInMemory} && ( $Param{CacheInMemory} // 1 ) ) {
             $Self->{Cache}->{ $Param{Type} }->{ $Param{Key} } = $Value;
         }
@@ -347,7 +357,9 @@ be executed both in memory and in the backend to avoid inconsistent cache states
 sub Delete {
     my ( $Self, %Param ) = @_;
 
-    ${ $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetTempValue( ValueName => 'Delete' ) }++;
+    if ( $Param{Type} ne 'PrometheusCache' ) {
+        ${ $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetTempValue( ValueName => 'Delete' ) }++;
+    }
 
     for my $Needed (qw(Type Key)) {
         if ( !$Param{$Needed} ) {
@@ -430,19 +442,27 @@ sub CleanUp {
 
 sub DESTROY {
     return if !$Kernel::OM->Get('Kernel::System::Prometheus::MetricManager')->IsMetricEnabled('CacheOperations');
-    return if $Kernel::OM->Get('Kernel::System::Prometheus')->{Guard}->isa('Kernel::System::Prometheus::Guard::Cache');
+
+    my $HelperObject = $Kernel::OM->Get('Kernel::System::Prometheus::Helper');
+    my %ValuesToUpdate;
+
+    for my $CounterName (qw( Get GetSuccess Set Delete )) {
+        if ( ( my $Value = ${ $HelperObject->GetTempValue( ValueName => $CounterName ) } || 0 ) > 0 ) {
+            $ValuesToUpdate{ $CounterName } = $Value;
+        }
+    }
+
+    return if !%ValuesToUpdate;
 
     my $PrometheusObject = $Kernel::OM->Get('Kernel::System::Prometheus');
-    my $HelperObject     = $Kernel::OM->Get('Kernel::System::Prometheus::Helper');
     my $Host = $HelperObject->GetHost();
 
     $PrometheusObject->Change(
         Callback => sub {
             my $Metrics = shift;
-
             for my $CounterName (qw( Get GetSuccess Set Delete )) {
-                $Metrics->{CacheOperations}->inc(
-                    $Host, $CounterName, ${ $HelperObject->GetTempValue( ValueName => $CounterName ) },
+                warn $Metrics->{CacheOperations}->inc(
+                    $Host, $CounterName, $ValuesToUpdate{ $CounterName },
                 );
             }
         }
