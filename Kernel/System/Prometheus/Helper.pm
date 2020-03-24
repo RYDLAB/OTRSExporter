@@ -28,18 +28,6 @@ sub new {
    return $Self;
 }
 
-sub GetTempValue {
-   my ( $Self, %Param ) = @_;
-
-   return \$Self->{Temp}->{ $Param{ValueName} };
-}
-
-sub CreateTempValue {
-   my ( $Self, %Param ) = @_;
-
-   $Self->{Temp}->{ $Param{ValueName} } = $Param{Value};
-}
-
 sub GetHost {
    return $_[0]->{Host};
 }

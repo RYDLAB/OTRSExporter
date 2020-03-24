@@ -49,6 +49,7 @@ If you don't have an .opm file you should create him.
 
 ### Installing package
 Before installing you should install following packages from cpan:
+*  Net::Prometheus
 *  Time::HiRes
 *  List::Util 
 *  Scalar::Util
@@ -58,7 +59,7 @@ Before installing you should install following packages from cpan:
 *  Sereal
 
 Installation for cpan-packages using cpanminus:
-`sudo cpanm Time::HiRes List::Util Scalar::Util Proc::ProcessTable Proc::Exists IPC::ShareLite Sereal`
+`sudo cpanm Net::Prometheus Time::HiRes List::Util Scalar::Util Proc::ProcessTable Proc::Exists IPC::ShareLite Sereal`
 
 To install package you can use web-interface.
 Go to http://localhost/otrs/index.pl?Action=AdminPackageManager or to another url for AdminPackageManger in your OTRS.

@@ -113,6 +113,62 @@ sub Render {
 
     $Self->_LoadSharedMetrics() || return 'empty result';
 
+    # Get http processes info
+    my $MainProcPID = 0;
+    my @ChildPIDs;
+
+    if ( $Kernel::OM->Get('Kernel::System::Prometheus::MetricManager')->IsMetricEnabled('HTTPProcessCollector') ) {
+        my $ServerCMND = $Self->{Settings}{ServerCMND};
+
+        my $ProcessTable = Proc::ProcessTable->new();
+
+        # get main proc
+        for my $ProcessObject ( @{ $ProcessTable->table } ) {
+            next if $ProcessObject->{cmndline} ne $ServerCMND;
+            next if $ProcessObject->{pgrp} != $ProcessObject->{pid};
+
+            $MainProcPID = $ProcessObject->{pid};
+        }
+
+        # get child pids
+        if ($MainProcPID) {
+            for my $ProcessObject ( @{ $ProcessTable->table } ) {
+                next if $ProcessObject->{pgrp} != $MainProcPID;
+                next if $ProcessObject->{pid} == $MainProcPID;
+
+                push @ChildPIDs, $ProcessObject->{pid};
+            }
+        }
+    }
+
+    if ($MainProcPID) {
+        my @ProcessCollectors;
+        my $Host = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost();
+
+        push @ProcessCollectors, Net::Prometheus::ProcessCollector->new(
+            pid    => $MainProcPID,
+            labels => [ host => $Host, level => 'parent', worker => $MainProcPID ],
+            prefix => 'http_process',
+        );
+
+        for my $PID (@ChildPIDs) {
+            push @ProcessCollectors, Net::Prometheus::ProcessCollector->new(
+                pid    => $PID,
+                labels => [ host => $Host, level => 'child', worker => $PID ],
+                prefix => 'http_process',
+            );
+        }
+
+        for my $ProcessCollector (@ProcessCollectors) {
+            $Self->{PrometheusObject}->register( $ProcessCollector );
+        }
+    }
+
+    # Init process-collectors for daemon process collectors variables
+    else {
+        Net::Prometheus::ProcessCollector->new( pid => 1 );
+    }
+
     $Self->{PrometheusObject}->render();
 }
 
@@ -301,9 +357,8 @@ sub UpdateDefaultMetrics {
     my $MetricManager = $Kernel::OM->Get('Kernel::System::Prometheus::MetricManager');
     my $TicketMetricEnabled = $MetricManager->IsMetricEnabled('OTRSTicketTotal');
     my $ArticleMetricEnabled = $MetricManager->IsMetricEnabled('OTRSArticleTotal');
-    my $HTTPProcMetricEnabled = $MetricManager->IsMetricEnabled('HTTPProcessCollector');
 
-    unless( $HTTPProcMetricEnabled || $TicketMetricEnabled || $ArticleMetricEnabled ) {
+    unless( $TicketMetricEnabled || $ArticleMetricEnabled ) {
         return;
     }
 
@@ -344,57 +399,12 @@ sub UpdateDefaultMetrics {
         }
     }
 
-    # Get http processes pids
-    my $MainProcPID = 0;
-    my @ChildPIDs;
-
-    if ($HTTPProcMetricEnabled) {
-        my $ServerCMND = $Self->{Settings}{ServerCMND};
-
-        my $ProcessTable = Proc::ProcessTable->new();
-
-        # get main proc
-        for my $ProcessObject ( @{ $ProcessTable->table } ) {
-            next if $ProcessObject->{cmndline} ne $ServerCMND;
-            next if $ProcessObject->{pgrp} != $ProcessObject->{pid};
-
-            $MainProcPID = $ProcessObject->{pid};
-        }
-
-        # get child pids
-        if ($MainProcPID) {
-            for my $ProcessObject ( @{ $ProcessTable->table } ) {
-                next if $ProcessObject->{pgrp} != $MainProcPID;
-                next if $ProcessObject->{pid} == $MainProcPID;
-
-                push @ChildPIDs, $ProcessObject->{pid};
-            }
-        }
-    }
-
     # Record info as metrics
     my $Host = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost();
 
     $Self->Change(
         Callback => sub {
             my $Metrics = shift;
-
-            if ($MainProcPID) {
-                $Metrics->{"ProcessCollector$MainProcPID"} = Net::Prometheus::ProcessCollector->new(
-                    pid    => $MainProcPID,
-                    labels => [ host => $Host, level => 'parent', worker => $MainProcPID ],
-                    prefix => 'http_process',
-                );
-
-                for my $PID (@ChildPIDs) {
-                    $Metrics->{"ProcessCollector$PID"} = Net::Prometheus::ProcessCollector->new(
-                        pid    => $PID,
-                        labels => [ host => $Host, level => 'child', worker => $PID ],
-                        prefix => 'http_process',
-                    );
-                }
-
-            }
 
             if (@ArticleInfo) {
                 for my $Row (@ArticleInfo) {
