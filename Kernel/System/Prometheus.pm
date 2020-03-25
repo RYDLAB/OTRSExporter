@@ -48,7 +48,7 @@ sub new {
 
     # Get guard type
     if ($Self->{Settings}{Guard}) {
-        my $GenericModule = 'Kernel::System::Prometheus::Guard::' . $Self->{Settings}{Guard};
+        my $GenericModule = 'Kernel::System::Prometheus::Guard::' . ( $Self->{Settings}{Guard} // 'Cache' );
         return if !$Kernel::OM->Get('Kernel::System::Main')->Require($GenericModule);
 
         if ( $Self->{Settings}{Guard} eq 'SHM' ) {
@@ -88,12 +88,6 @@ sub new {
     }
 
     if (!IsHashRefWithData( $Self->{Guard}->Fetch() )) {
-
-        $Kernel::OM->Get('Kernel::System::Log')->Log(
-            PrometheusLog => 1,
-            Message  => 'Shared memory is empty. Creating new metrics...',
-        );
-
         $Self->_CreateMetrics();
     }
 
@@ -118,7 +112,7 @@ sub Render {
     my @ChildPIDs;
 
     if ( $Kernel::OM->Get('Kernel::System::Prometheus::MetricManager')->IsMetricEnabled('HTTPProcessCollector') ) {
-        my $ServerCMND = $Self->{Settings}{ServerCMND};
+        my $ServerCMND = $Self->{Settings}{ServerCMND} // '/usr/sbin/apache2 -k start';
 
         my $ProcessTable = Proc::ProcessTable->new();
 
@@ -194,6 +188,7 @@ sub RefreshMetrics {
     for my $Summary (@$DaemonSummary) {
         next if $Summary->{Header} ne 'Recurrent cron tasks:';
         $RecurrentTasks = $Summary->{Data};
+        last;
     }
 
     if (!IsArrayRefWithData($RecurrentTasks)) {
@@ -211,7 +206,7 @@ sub RefreshMetrics {
             my $Metrics = shift;
 
             for my $Task (@$RecurrentTasks) {
-                my $WorkerRunningTime = $& if $Task->{LastWorkerRunningTime} =~ /\d/;
+                my $WorkerRunningTime = ${^MATCH} if $Task->{LastWorkerRunningTime} =~ /\d+/p;
 
                 $Metrics->{RecurrentTaskDuration}->set(
                     $Host, $Task->{Name}, $WorkerRunningTime // -1,
@@ -354,8 +349,8 @@ sub ClearDiedProcessCollectors {
 sub UpdateDefaultMetrics {
     my ( $Self, %Param ) = @_;
 
-    my $MetricManager = $Kernel::OM->Get('Kernel::System::Prometheus::MetricManager');
-    my $TicketMetricEnabled = $MetricManager->IsMetricEnabled('OTRSTicketTotal');
+    my $MetricManager        = $Kernel::OM->Get('Kernel::System::Prometheus::MetricManager');
+    my $TicketMetricEnabled  = $MetricManager->IsMetricEnabled('OTRSTicketTotal');
     my $ArticleMetricEnabled = $MetricManager->IsMetricEnabled('OTRSArticleTotal');
 
     unless( $TicketMetricEnabled || $ArticleMetricEnabled ) {

@@ -313,7 +313,6 @@ sub Get {
             if ( $Param{Type} ne 'PrometheusCache' ) {
                 $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->{Temp}{GetSuccess}++;
             }
-
             return $Self->{Cache}->{ $Param{Type} }->{ $Param{Key} };
         }
     }

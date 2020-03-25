@@ -57,7 +57,7 @@
 
                             <button class="CallForAction Fullsize Center" type="submit">
                                 <span><i class="fa fa-trash-o"></i>
-                                    [% Translate("Clear shared memory") | html %]
+                                    [% Translate("Clear memory") | html %]
                                 </span>
                             </button>
                         </form>

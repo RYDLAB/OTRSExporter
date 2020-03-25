@@ -55,10 +55,10 @@
             <div class="Content">
                 <div class="ExplanationChangingMetric">
                     <p class="FieldExplanation">
-                        [% Translate("Here you can change custom metrics for Prometheus. Also you can set SQL-query(in which last column is the value for metric and other is the labels) to automatically update metric") | html %]
+                        [% Translate("Here you can change custom metrics for Prometheus.") | html %]
                     </p>
                     <p class="FieldExplanation">
-                        [% Translate("if you want your metric to be updated automatically through the database, you can specify the SQL-query and update method according to the following pattern: ") %]
+                        [% Translate("To let your metric to be updated automatically through the database, you can specify the SQL-query and update method according to the following pattern:") %]
                     </p>
                     <p class="FieldExplanation">
                         SELECT label1, label2, ... labelN, update_value FROM ...

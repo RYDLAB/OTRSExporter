@@ -14,8 +14,8 @@
         You can install them using cpanminus
     </IntroInstall>
     <IntroInstall Type="pre" Lang="ru" Title="Зависимости">
-        Перед установкой пакета, вам необходима загрузить или обновить следующие пакеты:
-            Time::HiRes List::Util Scalar::Util Proc::ProcessTable Proc::Exists IPC::ShareLite Sereal
+        Перед установкой пакета, вам необходимо загрузить или обновить следующие пакеты:
+            Net::Prometheus Time::HiRes List::Util Scalar::Util Proc::ProcessTable Proc::Exists IPC::ShareLite Sereal
         Вы можете установить их используя cpanminus
     </IntroInstall>
     <IntroInstall Type="post" Lang="en" Title="Thank you for installing OTRS exporter!">
@@ -28,8 +28,8 @@
     </IntroInstall>
     <ChangeLog Version="0.0.1" Date="2020-02-16 17:00:00">First release</ChangeLog>
     <ChangeLog Version="0.0.2" Date="2020-02-20 12:00:00">Modified Net::Prometheus::ProcessCollector::linux to resolve problem with BOOTTIME</ChangeLog>
-    <ChangeLog Version="0.0.3" Date="2020-02-22 16:00:00">
-        Added option for guard backends. Added cache-backend for guard. Improved process collecting.
+    <ChangeLog Version="0.0.3" Date="2020-02-25 16:20:00">
+        Added option for guard backends. Added cache-backend for guard. Improved process collecting. Russian language support added
     </ChangeLog>
     <PackageIsVisible>1</PackageIsVisible>
     <PackageIsDownloadable>1</PackageIsDownloadable>
@@ -46,6 +46,7 @@
     <ModuleRequired Version="4">Sereal</ModuleRequired>
     <OS>linux</OS>
     <Filelist>
+        <File Permission="644" Location="Kernel/Language/ru_AdminPrometheus.pm"></File>
         <File Permission="644" Location="Kernel/Modules/AdminPrometheus.pm"></File>
         <File Permission="644" Location="Kernel/Modules/AdminGenericInterfaceTransportHTTPSendText.pm"></File>
         <File Permission="644" Location="Kernel/Output/HTML/Templates/Standard/MetricForm.tt"></File>

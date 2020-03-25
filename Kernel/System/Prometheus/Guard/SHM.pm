@@ -16,6 +16,14 @@ use parent 'Kernel::System::Prometheus::Guard';
 use IPC::ShareLite qw(:lock);
 use Sereal qw( get_sereal_decoder get_sereal_encoder );
 
+use constant {
+    DEFAULT_SHARED_MEMORY_KEY => 1999,
+    DEFAULT_CREATE_FLAG       => 1,
+    DEFAULT_DESTROY_FLAG      => 0,
+    DEFAULT_ACCESS_MODE       => 0666,
+    DEFAULT_SIZE              => 65536,
+};
+
 our @ObjectDependencies = (
     'Kernel::System::Log',
 );
@@ -30,11 +38,11 @@ sub new {
     $Self->{ENCODER} = get_sereal_encoder();
 
     $Self->{SharedMem} = IPC::ShareLite->new(
-        -key     => $Param{SHAREDKEY}   // 1999,
-        -create  => $Param{CreateFlag}  // 1,
-        -destroy => $Param{DestroyFlag} // 0,
-        -mode    => 0666,
-        -size    => 65536,
+        -key     => $Param{SHAREDKEY}   // DEFAULT_SHARED_MEMORY_KEY,
+        -create  => $Param{CreateFlag}  // DEFAULT_CREATE_FLAG,
+        -destroy => $Param{DestroyFlag} // DEFAULT_DESTROY_FLAG,
+        -mode    => $Param{Mode}        // DEFAULT_ACCESS_MODE,
+        -size    => $Param{Size}        // DEFAULT_SIZE,
     );
 
     for my $Needed ( qw( DECODER ENCODER SharedMem ) ) {

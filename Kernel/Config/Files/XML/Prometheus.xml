@@ -18,13 +18,7 @@
     <-- Settings -->
 
     <Setting Name="Prometheus::Settings" Required="1" Valid="1">
-        <Description Translatable="1">
-            CustomMetrics -- enabled collecting custom metrics or not?
-            SharedMemoryKey -- ID for Guard::SHM which uses shared memory to save metrics.
-            ServerCMND -- name of the main http process of your web-server.
-            Guard -- guard object to use. Ususally Guard::Cache using for distributed systems, and Guard::SHM for OTRS using one OS.
-            DefaultMetrics -- enabled or disabled default metrics.
-        </Description>
+        <Description Translatable="1">Settings for OTRS exporter</Description>
         <Value>
             <Hash>
                 <Item ValueType="Checkbox" Key="CustomMetrics">1</Item>
@@ -121,7 +115,7 @@
     <-- Cron Tasks -->
 
     <Setting Name="Daemon::SchedulerCronTaskManager::Task###PrometheusUpdateMetrics" Required="0" Valid="1" ConfigLevel="100">
-        <Description Translatable="1">Update metrics from database and /proc/</Description>
+        <Description Translatable="1">Update default metrics from database</Description>
         <Navigation>Daemon::SchedulerCronTaskManager::Task</Navigation>
         <Value>
             <Hash>
@@ -157,12 +151,7 @@
     </Setting>
 
     <Setting Name="Daemon::SchedulerCronTaskManager::Task###PrometheusClearDiedProcessCollectors" Required="0" Valid="1" ConfigLevel="100">
-        <Description Translatable="1">
-            Delete process collectors for died processes. For example:
-            We collecting information(memory, cpu seconds ...) about process with pid 1234
-            But once process 1234 was died, so we do not have to have information about this
-            collector in shared memory. This method delete all collectors for died processes
-        </Description>
+        <Description Translatable="1">Delete process collectors for died processes.</Description>
         <Navigation>Daemon::SchedulerCronTaskManager::Task</Navigation>
         <Value>
             <Hash>
@@ -180,11 +169,7 @@
     </Setting>
 
     <Setting Name="Daemon::SchedulerCronTaskManager::Task###PrometheusClearValuesWithDiedPids" Required="0" Valid="1" ConfigLevel="100">
-        <Description Translatable="1">
-            Delete values with died workers as label. For example:
-                http_requests_total{host="...", worker="1234"} ...
-            Process with pid 1234 already doesn't exists, so we delete this metric value
-        </Description>
+        <Description Translatable="1">Delete values with died workers as label</Description>
         <Navigation>Daemon::SchedulerCronTaskManager::Task</Navigation>
         <Value>
             <Hash>

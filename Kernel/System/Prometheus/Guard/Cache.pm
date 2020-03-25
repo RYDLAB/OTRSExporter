@@ -64,9 +64,10 @@ sub Store {
     }
 
     $Kernel::OM->Get('Kernel::System::Cache')->Set(
-        Type => 'PrometheusCache',
-        Key  => 'Metrics',
-        Value => $Param{Data},
+        Type           => 'PrometheusCache',
+        Key            => 'Metrics',
+        Value          => $Param{Data},
+        CacheInMemory  => 0,
     );
 
     return 1;
@@ -76,8 +77,9 @@ sub Fetch {
     my ( $Self, %Param ) = @_;
 
     return $Kernel::OM->Get('Kernel::System::Cache')->Get(
-        Type => 'PrometheusCache',
-        Key  => 'Metrics',
+        Type           => 'PrometheusCache',
+        Key            => 'Metrics',
+        CacheInMemory  => 0,
     );
 }
 

@@ -71,6 +71,9 @@ After installing OPM package, we should set few options in OTRS system configura
 Go to OTRS system configuration page (http://localhost/otrs/index.pl?Action=AdminSystemConfiguration).
 In search box enter 'Prometheus::Settings'. Set the value of ServerCMND to yours. This value you can find using ps command. ServerCMND is name of your main http process.
 
+Also you can set the 'Guard' option to choose, which object will used to save metrics. Guard::Cache usually used for distributed OTRS-system (more than 1 machine/virtual-machine) but it is 
+as a rule slower, than Guard::SHM. Guard::SHM using shared memory, so your operating system must support SysV IPC (shared memory and semaphores).
+
 ### Creating Web-service for Prometheus
 
 Now it's time to create new web service in OTRS for Prometheus monitoring system.
@@ -80,6 +83,20 @@ Now add new operation for Prometheus::MetricGet. Insert name, save and finish. T
 and finish.
 
 The URL with metrics will looks like this: http://host/otrs/nph-genericinterface.pl/Webservice/$WebserviceName/$OperationRoute.
+
+## Uninstall module
+
+### Warning!
+
+After uninstalling you should restart your web-server
+
+### Uninstall package
+
+Go to your package manager (http://localhost/otrs/index.pl?Action=AdminPackageManager). In table find OTRS exporter and press on "uninstall" option.
+Wait while OTRS uninstalling package. Restart your web-server
+
+If you want to delete early created web-service, go to your web-service manager (http://localhost/otrs/index.pl?Action=AdminGenericInterfaceWebservice),
+find your created web-service and click on his name. Then at the block 'Actions' click on 'Delete web-service' button'.
 
 ## Custom metrics
 
