@@ -189,9 +189,8 @@ sub Log {
         Line      => $Line1,
     );
 
-    if( 
-        !$Param{PrometheusLog}
-        && $Subroutine2 !~ /Prometheus/i
+    if(
+        $Subroutine2 !~ m{Prometheus}i
         && $Kernel::OM->Get('Kernel::System::Prometheus::MetricManager')->IsMetricEnabled('OTRSLogsTotal')
     )
     {

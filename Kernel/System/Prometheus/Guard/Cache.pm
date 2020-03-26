@@ -23,7 +23,6 @@ sub Change {
 
     if ( !$Param{Callback} ) {
         $Kernel::OM->Get('Kernel::System::Log')->Log(
-            PrometheusLog => 1,
             Priority      => 'error',
             Message       => 'Callback is empty!',
         );
@@ -35,7 +34,6 @@ sub Change {
 
     if (!$DataToChange) {
         $Kernel::OM->Get('Kernel::System::Log')->Log(
-            PrometheusLog => 1,
             Priority      => 'error',
             Message       => 'Guard can not change empty data',
         );
@@ -55,7 +53,6 @@ sub Store {
 
     if ( !$Param{Data} ) {
         $Kernel::OM->Get('Kernel::System::Log')->Log(
-            PrometheusLog => 1,
             Priority => 'Error',
             Message  => 'Data to store is empty! Check params!'
         );

@@ -38,7 +38,7 @@ sub new {
     $Self->{ENCODER} = get_sereal_encoder();
 
     $Self->{SharedMem} = IPC::ShareLite->new(
-        -key     => $Param{SHAREDKEY}   // DEFAULT_SHARED_MEMORY_KEY,
+        -key     => $Param{SharedMemoryKey}   // DEFAULT_SHARED_MEMORY_KEY,
         -create  => $Param{CreateFlag}  // DEFAULT_CREATE_FLAG,
         -destroy => $Param{DestroyFlag} // DEFAULT_DESTROY_FLAG,
         -mode    => $Param{Mode}        // DEFAULT_ACCESS_MODE,
@@ -48,7 +48,6 @@ sub new {
     for my $Needed ( qw( DECODER ENCODER SharedMem ) ) {
         if (!$Self->{$Needed}) {
             $Kernel::OM->Get('Kernel::System::Log')->Log(
-                PrometheusLog => 1,
                 Priority => 'error',
                 Message  => "Prometheus::Guard can not to create object $Needed",
             );
@@ -66,7 +65,6 @@ sub Change {
 
     if (!$Param{Callback}) {
         $Kernel::OM->Get('Kernel::System::Log')->Log(
-            PrometheusLog => 1,
             Priority => 'error',
             Message  => 'Callback is empty!',
         );
@@ -80,7 +78,6 @@ sub Change {
 
     if (!$Data) {
         $Kernel::OM->Get('Kernel::System::Log')->Log(
-            PrometheusLog => 1,
             Priority => 'error',
             Message  => 'Guard can not change empty data!',
         );
@@ -103,7 +100,6 @@ sub Store {
 
     if ( !$Param{Data} ) {
         $Kernel::OM->Get('Kernel::System::Log')->Log(
-            PrometheusLog => 1,
             Priority => 'error',
             Message  => 'Data to store is empty! Please check param.',
         );

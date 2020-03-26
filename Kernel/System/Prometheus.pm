@@ -15,8 +15,8 @@ use Net::Prometheus::ProcessCollector::linux;
 
 use Kernel::System::VariableCheck qw( IsArrayRefWithData IsHashRefWithData );
 use Proc::ProcessTable;
-use Proc::Exists qw(pexists);
-use List::Util qw( any first );
+use Proc::Exists 'pexists';
+use List::Util   'any';
 
 our @ObjectDependencies = (
     'Kernel::System::Prometheus::MetricManager',
@@ -38,7 +38,6 @@ sub new {
 
     if (!$Self->{Settings}) {
         $Kernel::OM->Get('Kernel::System::Log')->Log(
-            PrometheusLog => 1,
             Priority => 'error',
             Message  => 'Can\'t load prometheus settings! Did you create config file?',
         );
@@ -55,8 +54,8 @@ sub new {
             $Self->{Guard} = $Kernel::OM->Create(
                 $GenericModule,
                 ObjectParams => {
-                    SHAREDKEY   => $Self->{Settings}{SharedMemoryKey},
-                    DestroyFlag => 0,
+                    SharedMemoryKey => $Self->{Settings}{SharedMemoryKey},
+                    DestroyFlag     => 0,
                 },
             );
         }
@@ -68,7 +67,6 @@ sub new {
 
     else {
         $Kernel::OM->Get('Kernel::System::Log')->Log(
-            PrometheusLog => 1,
             Priority => 'error',
             Message  => 'Can\'t load prometheus guard setting!',
         );
@@ -79,7 +77,6 @@ sub new {
 
     if (!$Self->{PrometheusObject}) {
         $Kernel::OM->Get('Kernel::System::Log')->Log(
-            PrometheusLog => 1,
             Priority => 'error',
             Message  => 'Can\'t create prometheus object!',
         );
@@ -112,7 +109,7 @@ sub Render {
     my @ChildPIDs;
 
     if ( $Kernel::OM->Get('Kernel::System::Prometheus::MetricManager')->IsMetricEnabled('HTTPProcessCollector') ) {
-        my $ServerCMND = $Self->{Settings}{ServerCMND} // '/usr/sbin/apache2 -k start';
+        my $ServerCMND = $Self->{Settings}{ServerCMND};
 
         my $ProcessTable = Proc::ProcessTable->new();
 
@@ -158,7 +155,8 @@ sub Render {
         }
     }
 
-    # Init process-collectors for daemon process collectors variables
+    # Init process-collector variables to avoid warnings about unitialized variables (e.g. $BOOTTIME)
+    # Especially for daemon processes
     else {
         Net::Prometheus::ProcessCollector->new( pid => 1 );
     }
@@ -193,7 +191,6 @@ sub RefreshMetrics {
 
     if (!IsArrayRefWithData($RecurrentTasks)) {
         $Kernel::OM->Get('Kernel::System::Log')->Log(
-            PrometheusLog => 1,
             Priority => 'error',
             Message  => 'Didn\'t get any data about recurrent tasks',
         );
@@ -238,7 +235,6 @@ sub NewProcessCollector {
 
     if ( !$Param{PID} ) {
         $Kernel::OM->Get('Kernel::System::Log')->Log(
-            PrometheusLog => 1,
             Priority => 'error',
             Message  => 'Didn\'t get PID to collect',
         );
@@ -526,7 +522,6 @@ sub _LoadSharedMetrics {
 
     if (!$SharedMetrics) {
         $Kernel::OM->Get('Kernel::System::Log')->Log(
-            PrometheusLog => 1,
             Priority => 'error',
             Message  => 'Prometheus can not load metrics from shared memory. It\'s empty!',
         );

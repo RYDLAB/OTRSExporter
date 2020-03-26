@@ -51,7 +51,7 @@ If you don't have an .opm file you should create him.
 Before installing you should install following packages from cpan:
 *  Net::Prometheus
 *  Time::HiRes
-*  List::Util 
+*  List::Util
 *  Scalar::Util
 *  Proc::ProcessTable
 *  Proc::Exists
@@ -71,7 +71,7 @@ After installing OPM package, we should set few options in OTRS system configura
 Go to OTRS system configuration page (http://localhost/otrs/index.pl?Action=AdminSystemConfiguration).
 In search box enter 'Prometheus::Settings'. Set the value of ServerCMND to yours. This value you can find using ps command. ServerCMND is name of your main http process.
 
-Also you can set the 'Guard' option to choose, which object will used to save metrics. Guard::Cache usually used for distributed OTRS-system (more than 1 machine/virtual-machine) but it is 
+Also you can set the 'Guard' option to choose, which object will used to save metrics. Guard::Cache usually used for distributed OTRS-system (more than 1 machine/virtual-machine) but it is
 as a rule slower, than Guard::SHM. Guard::SHM using shared memory, so your operating system must support SysV IPC (shared memory and semaphores).
 
 ### Creating Web-service for Prometheus

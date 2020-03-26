@@ -15,7 +15,6 @@ sub Data {
 
     # $$START$$
     # possible charsets
-    $Self->{Charset} = ['utf-8', ];
     $Self->{Translation}{'Custom metrics'} = 'Пользовательские метрики';
     $Self->{Translation}{'Manage prometheuses custom metrics'} =  'Управление метриками для Prometheus';
     $Self->{Translation}{'Filter for metrics'} = 'Фильтр для метрик';

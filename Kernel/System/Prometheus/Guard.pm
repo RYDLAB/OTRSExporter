@@ -22,22 +22,10 @@ sub new {
     return $Self;
 }
 
-sub Change {
-    my ( $Self, %Param ) = @_;
+sub Change { die 'Using virtual method!' }
 
-    return 0;
-}
+sub Store  { die 'Using virtual method!' }
 
-sub Store {
-    my ( $Self, %Param ) = @_;
-
-    return 0;
-}
-
-sub Fetch {
-    my ( $Self, %Param ) = @_;
-    
-    return 0;
-}
+sub Fetch  { die 'Using virtual method!' }
 
 1

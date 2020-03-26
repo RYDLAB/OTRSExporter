@@ -11,7 +11,7 @@
     <label for="MetricNamespace">[% Translate("Namespace") | html %]:</label>
     <div class="Field">
         <input type="text" name="MetricNamespace" id="MetricNamespace" class="W50pc" value="[% Data.MetricNamespace | html%]">
-        <p class="FieldExplanation">[% Translate("Prefix for metric like here: 'namespace_name{labels} value'")|html %] </p>
+        <p class="FieldExplanation">[% Translate("Prefix for metric like here: 'namespace_name{labels} value'") | html %] </p>
     </div>
     <div class="Clear"></div>
 
@@ -26,7 +26,7 @@
     <div class="Field">
         <input type="text" name="MetricHelp" id="MetricHelp" class="W50pc Validate_Required" value="[% Data.MetricHelp | html %]">
         <div id="MetricHelpError" class="TooltipErrorMessage"><p>[% Translate("This field is required") | html %]</p></div>
-        <p class="FieldExplanation">[% Translate("Description for metric") |html %]</p>
+        <p class="FieldExplanation">[% Translate("Description for metric") | html %]</p>
     </div>
     <div class="Clear"></div>
 

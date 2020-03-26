@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <otrs_config version="2.0" init="Changes">
 
-    <-- Web Service operation -->
+    <!-- Web Service operation -->
 
     <Setting Name="GenericInterface::Operation::Module###Prometheus::MetricGet" Required="0" Valid="1">
         <Description Translatable="1">GenericInterface module registration for the operation layer.</Description>
@@ -15,7 +15,7 @@
         </Value>
     </Setting>
 
-    <-- Settings -->
+    <!-- Settings -->
 
     <Setting Name="Prometheus::Settings" Required="1" Valid="1">
         <Description Translatable="1">Settings for OTRS exporter</Description>
@@ -51,7 +51,7 @@
         </Value>
     </Setting>
 
-    <-- Prometheus front-end modules -->
+    <!-- Prometheus front-end modules -->
 
     <Setting Name="Frontend::Module###AdminPrometheus" Required="0" Valid="1">
         <Description Translatable="1">Frontend module registration for the agent interface.</Description>
@@ -112,7 +112,7 @@
         </Value>
     </Setting>
 
-    <-- Cron Tasks -->
+    <!-- Cron Tasks -->
 
     <Setting Name="Daemon::SchedulerCronTaskManager::Task###PrometheusUpdateMetrics" Required="0" Valid="1" ConfigLevel="100">
         <Description Translatable="1">Update default metrics from database</Description>
