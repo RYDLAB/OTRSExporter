@@ -15,6 +15,16 @@ use Kernel::System::VariableCheck qw(IsArrayRefWithData);
 
 our $ObjectManagerDisabled = 1;
 
+=head1 NAME
+
+Kernel::Modules::AdminPrometheus
+
+=head1 DESCRIPTION
+
+OTRS exporter frontend-module to manipulate custom metrics
+
+=cut
+
 sub new {
     my ( $Type, %Param ) = @_;
 
@@ -249,7 +259,7 @@ sub Run {
         my $ClearSuccess = $Kernel::OM->Get('Kernel::System::Prometheus')->ClearMemory;
 
         if ($ClearSuccess) {
-            $Param{NotifyMessage} = 'Shared memory successfully cleared';
+            $Param{NotifyMessage} = 'Memory successfully cleared';
 
             my $Output = $Self->_RenderCustomMetricsListPage(NotifyMessage => $Param{NotifyMessage});
 
@@ -261,7 +271,7 @@ sub Run {
             What => 'Message',
         );
 
-        $Param{NotifyMessage} = "An error has occured while clearing shared memory: $ErrorMessage";
+        $Param{NotifyMessage} = "An error has occured while clearing memory: $ErrorMessage";
         $Param{NotifyPriority} = 'error';
 
         my $Output = $Self->_RenderCustomMetricsListPage(%Param);

@@ -16,6 +16,17 @@ use Sys::Hostname;
 
 our @ObjectDependencies = ();
 
+=head1 NAME
+
+    Kernel::System::Prometheus::Helper
+
+=head1 DESCRIPTION
+
+    Help-object for Prometheus to record values such as elapsed time, host-name
+    or just to save temp-values without using cache
+
+=cut
+
 sub new {
    my ( $Type, %Param ) = @_;
 
@@ -26,18 +37,6 @@ sub new {
    $Self->{Temp} = {};
 
    return $Self;
-}
-
-sub GetTempValue {
-   my ( $Self, %Param ) = @_;
-
-   return \$Self->{Temp}->{ $Param{ValueName} };
-}
-
-sub CreateTempValue {
-   my ( $Self, %Param ) = @_;
-
-   $Self->{Temp}->{ $Param{ValueName} } = $Param{Value};
 }
 
 sub GetHost {
