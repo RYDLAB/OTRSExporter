@@ -26,6 +26,16 @@ our @ObjectDependencies = (
     'Kernel::Config',
 );
 
+=head1 NAME
+
+    Kernel::System::Prometheus
+
+=head1 DESCRIPTION
+
+    General object update metric values
+
+=cut
+
 sub new {
     my ( $Type, %Param ) = @_;
 
@@ -203,7 +213,7 @@ sub RefreshMetrics {
             my $Metrics = shift;
 
             for my $Task (@$RecurrentTasks) {
-                my $WorkerRunningTime = ${^MATCH} if $Task->{LastWorkerRunningTime} =~ /\d+/p;
+                my $WorkerRunningTime = ${^MATCH} if $Task->{LastWorkerRunningTime} =~ m{\d+}p;
 
                 $Metrics->{RecurrentTaskDuration}->set(
                     $Host, $Task->{Name}, $WorkerRunningTime // -1,
@@ -277,7 +287,7 @@ sub ClearValuesWithDiedPids {
 
     my $HaveToDelete;
 
-    for my $MetricName (qw/ HTTPRequestsTotal HTTPResponseSizeBytes HTTPRequestDurationSeconds /) {
+    for my $MetricName (qw( HTTPRequestsTotal HTTPResponseSizeBytes HTTPRequestDurationSeconds )) {
         next if !$MetricManager->IsMetricEnabled($MetricName);
 
         $ToDeleteKeys{$MetricName} = [];
@@ -329,8 +339,8 @@ sub ClearDiedProcessCollectors {
 
     my @DiedCollectors;
     for my $MetricName( keys %{ $Metrics } ) {
-        next if $MetricName !~ /ProcessCollector\K\d+/p;
-        my $PID = ${^MATCH};
+        next if $MetricName !~ m{ProcessCollector\K(\d+)}p;
+        my $PID = $1;
         next if pexists($PID);
         push @DiedCollectors, "ProcessCollector$PID";
     }

@@ -19,6 +19,16 @@ our @ObjectDependencies = (
     'Kernel::System::Log',
 );
 
+=head1 NAME
+
+    Kernel::System::Prometheus::MetricManager
+
+=head1 DESCRIPTION
+
+    Object to manipulate data of default and custom metrics.
+
+=cut
+
 sub new {
     my ( $Type, %Param ) = @_;
 

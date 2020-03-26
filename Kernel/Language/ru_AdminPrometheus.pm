@@ -10,6 +10,16 @@ use strict;
 use warnings;
 use utf8;
 
+=head1 NAME
+
+    Kernel::Language::ru_AdminPrometheus
+
+=head2 DESCRIPTION
+
+    Russian language module for Prometheus frontend-module (AdminPrometheus)
+
+=cut
+
 sub Data {
     my $Self = shift;
 

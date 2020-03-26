@@ -17,6 +17,16 @@ our @ObjectDependencies = (
     'Kernel::System::Prometheus',
 );
 
+=head1 NAME
+
+    Kernel::GenericInterface::Operation::Prometheus::MetricGet
+
+=head1 DESCRIPTION
+
+    OTRS Exporter operation for web-service to get all valid metrics from Kernel::System::Prometheus object
+
+=cut
+
 sub new {
     my ( $Type, %Param ) = @_;
 

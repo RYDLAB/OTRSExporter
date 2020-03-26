@@ -15,6 +15,16 @@ use Kernel::System::VariableCheck qw(IsArrayRefWithData);
 
 our $ObjectManagerDisabled = 1;
 
+=head1 NAME
+
+Kernel::Modules::AdminPrometheus
+
+=head1 DESCRIPTION
+
+OTRS exporter frontend-module to manipulate custom metrics
+
+=cut
+
 sub new {
     my ( $Type, %Param ) = @_;
 

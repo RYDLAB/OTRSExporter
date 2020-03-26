@@ -79,8 +79,10 @@ as a rule slower, than Guard::SHM. Guard::SHM using shared memory, so your opera
 Now it's time to create new web service in OTRS for Prometheus monitoring system.
 Go to http://localhost/otrs/index.pl?Action=AdminGenericInterfaceWebservice and add new web service.
 Enter some name('Prometheus' for example), and in block OTRS as provider as network transport choose HTTP::SendText. Save web-service.
-Now add new operation for Prometheus::MetricGet. Insert name, save and finish. Then configure network transport: for created operation add route by which prometheus will come. Save
-and finish.
+Now add new operation for Prometheus::MetricGet. Insert name, save and finish. 
+
+Then configure network transport (find button 'configure' near 'HTTP::SendText'): for created operation add route by which prometheus will come.
+Save and finish.
 
 The URL with metrics will looks like this: http://host/otrs/nph-genericinterface.pl/Webservice/$WebserviceName/$OperationRoute.
 

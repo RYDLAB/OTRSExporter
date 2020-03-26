@@ -13,6 +13,16 @@ use warnings;
 
 our @ObjectDependencies = ();
 
+=head1 NAME
+
+    Kernel::System::Prometheus::Guard
+
+=head1 DESCRIPTION
+
+    Object to manipulate saving metrics. Should have methods [ Change, Store, Fetch ]
+
+=cut
+
 sub new {
     my ( $Type, %Param ) = @_;
 

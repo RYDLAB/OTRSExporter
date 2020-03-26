@@ -190,7 +190,7 @@ sub Log {
     );
 
     if(
-        $Subroutine2 !~ m{Prometheus}i
+        $Subroutine2 !~ m{Prometheus}i # avoid recursive calls to create new Prometheus or OTRS exporter object
         && $Kernel::OM->Get('Kernel::System::Prometheus::MetricManager')->IsMetricEnabled('OTRSLogsTotal')
     )
     {
