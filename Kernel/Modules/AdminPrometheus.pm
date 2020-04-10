@@ -47,10 +47,6 @@ sub Run {
         return $LayoutObject->SecureMode();
     }
 
-    if ( !$Kernel::OM->Get('Kernel::System::Prometheus')->IsAllCustomMetricsCreated ) {
-        $Param{NotifyMessage} = 'Not all custom metrics are deployed! Please deploy them';
-    }
-
     if( $Self->{Subaction} eq 'CreateMetric' ) {
         my $Output = $Self->_RenderCreateCustomMetricPage(%Param);
 
@@ -130,6 +126,7 @@ sub Run {
         $Param{MetricNamespace} = $MetricInfo->{Namespace};
         $Param{MetricName} = $MetricInfo->{Name};
         $Param{MetricHelp} = $MetricInfo->{Help};
+        $Param{MetricType} = $MetricInfo->{Type};
         $Param{SQL} = $MetricInfo->{SQL};
         $Param{MetricLabels} = join ' ', @{ $MetricInfo->{Labels} };
         $Param{MetricBuckets} = join ' ', @{ $MetricInfo->{Buckets} };
@@ -229,30 +226,6 @@ sub Run {
         my $Output = $Self->_RenderCustomMetricListPage(%Param);
 
         return $Output
-    }
-
-    elsif ( $Self->{Subaction} eq 'DeployMetrics' ) {
-        my $MergeSuccess = $Kernel::OM->Get('Kernel::System::Prometheus')->MergeCustomMetrics;
-
-        if ($MergeSuccess) {
-            $Param{NotifyMessage} = 'Metrics successfully deployed!';
-
-            my $Output = $Self->_RenderCustomMetricsListPage( NotifyMessage => $Param{NotifyMessage} );
-
-            return $Output;
-        }
-
-        my $ErrorMessage = $Kernel::OM->Get('Kernel::System::Log')->GetLogEntry(
-            Type => 'Error',
-            What => 'Message',
-        );
-
-        $Param{NotifyMessage} = "An error has occured while deploying metric: $ErrorMessage";
-        $Param{NotifyPriority} = 'error';
-
-        my $Output = $Self->_RenderCustomMetricsListPage(%Param);
-
-        return $Output;
     }
 
     elsif ( $Self->{Subaction} eq 'ClearMemory' ) {

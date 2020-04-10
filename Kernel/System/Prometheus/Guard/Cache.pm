@@ -18,6 +18,15 @@ our @ObjectDependencies = (
     'Kernel::System::Cache',
 );
 
+sub new {
+    my ( $Type, %Param ) = @_;
+
+    my $Self = {};
+    bless( $Self, $Type );
+
+    return $Self;
+}
+
 sub Change {
     my ( $Self, %Param ) = @_;
 
@@ -30,12 +39,12 @@ sub Change {
         return;
     }
 
-    my $DataToChange = $Self->Fetch();
+    my $DataToChange = $Self->Fetch() // {};
 
     if (!$DataToChange) {
         $Kernel::OM->Get('Kernel::System::Log')->Log(
-            Priority      => 'error',
-            Message       => 'Guard can not change empty data',
+            Priority => 'error',
+            Message  => 'Data to change is empty',
         );
 
         return;
@@ -45,7 +54,7 @@ sub Change {
 
     $Self->Store( Data => $DataToChange );
 
-    return 0;
+    return 1;
 }
 
 sub Store {
@@ -62,7 +71,7 @@ sub Store {
 
     $Kernel::OM->Get('Kernel::System::Cache')->Set(
         Type           => 'PrometheusCache',
-        Key            => 'Metrics',
+        Key            => 'StoredData',
         Value          => $Param{Data},
         CacheInMemory  => 0,
     );
@@ -75,9 +84,11 @@ sub Fetch {
 
     return $Kernel::OM->Get('Kernel::System::Cache')->Get(
         Type           => 'PrometheusCache',
-        Key            => 'Metrics',
+        Key            => 'StoredData',
         CacheInMemory  => 0,
     );
 }
+
+
 
 1

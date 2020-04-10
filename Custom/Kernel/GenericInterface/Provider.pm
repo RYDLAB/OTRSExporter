@@ -589,6 +589,10 @@ sub _HandleError {
     );
 }
 
+sub DESTROY {
+    $Kernel::OM->Get('Kernel::System::Prometheus')->ShareMetrics()
+}
+
 1;
 
 =end Internal:

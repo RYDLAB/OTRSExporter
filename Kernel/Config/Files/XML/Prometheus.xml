@@ -36,6 +36,7 @@
 
                         <Item Key="OTRSIncomeMailTotal" ValueType="Checkbox">1</Item>
                         <Item Key="OTRSOutgoingMailTotal" ValueType="Checkbox">1</Item>
+                        <Item Key="OTRSReallySendedMailTotal" ValueType="Checkbox">1</Item>
                         <Item Key="OTRSTicketTotal" ValueType="Checkbox">1</Item>
                         <Item Key="OTRSArticleTotal" ValueType="Checkbox">1</Item>
                         <Item Key="OTRSLogsTotal" ValueType="Checkbox">1</Item>
@@ -150,33 +151,15 @@
         </Value>
     </Setting>
 
-    <Setting Name="Daemon::SchedulerCronTaskManager::Task###PrometheusClearDiedProcessCollectors" Required="0" Valid="1" ConfigLevel="100">
-        <Description Translatable="1">Delete process collectors for died processes.</Description>
-        <Navigation>Daemon::SchedulerCronTaskManager::Task</Navigation>
-        <Value>
-            <Hash>
-                <Item Key="TaskName">PrometheusClearDiedProcessCollectors</Item>
-                <Item Key="Schedule">* * * * *</Item><!--each minute -->
-                <Item Key="Module">Kernel::System::Prometheus</Item>
-                <Item Key="Function">ClearDiedProcessCollectors</Item>
-                <Item Key="MaximumParallelInstances">1</Item>
-                <Item Key="Params">
-                    <Array>
-                    </Array>
-                </Item>
-            </Hash>
-        </Value>
-    </Setting>
-
-    <Setting Name="Daemon::SchedulerCronTaskManager::Task###PrometheusClearValuesWithDiedPids" Required="0" Valid="1" ConfigLevel="100">
+    <Setting Name="Daemon::SchedulerCronTaskManager::Task###PrometheusDeleteDiedPIDs" Required="0" Valid="1" ConfigLevel="100">
         <Description Translatable="1">Delete values with died workers as label</Description>
         <Navigation>Daemon::SchedulerCronTaskManager::Task</Navigation>
         <Value>
             <Hash>
-                <Item Key="TaskName">PrometheusClearValuesWithDiedPids</Item>
-                <Item Key="Schedule">0 * * * *</Item><!--each minute -->
+                <Item Key="TaskName">PrometheusDeleteDiedPIDs</Item>
+                <Item Key="Schedule">* * * * *</Item><!--each minute -->
                 <Item Key="Module">Kernel::System::Prometheus</Item>
-                <Item Key="Function">ClearValuesWithDiedPids</Item>
+                <Item Key="Function">DeleteDiedPIDs</Item>
                 <Item Key="MaximumParallelInstances">1</Item>
                 <Item Key="Params">
                     <Array>

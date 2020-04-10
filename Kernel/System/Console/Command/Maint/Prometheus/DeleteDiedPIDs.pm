@@ -6,7 +6,7 @@
 # did not receive this file, see https://www.gnu.org/licenses/gpl-3.0.txt.
 # --
 
-package Kernel::System::Console::Command::Maint::Prometheus::DeleteValuesWithDiedPIDs;
+package Kernel::System::Console::Command::Maint::Prometheus::DeleteDiedPIDs;
 
 use strict;
 use warnings;
@@ -20,7 +20,7 @@ our @ObjectDependencies = (
 sub Configure {
     my ( $Self, %Param ) = @_;
 
-    $Self->Description("Delete the metric values with died workers as label");
+    $Self->Description("Delete metrics from died processes");
 
     return;
 }
@@ -28,9 +28,9 @@ sub Configure {
 sub Run {
     my ( $Self, %Param ) = @_;
 
-    $Self->Print("<yellow>Deleting the metric values with died workers as label...</yellow>\n");
+    $Self->Print("<yellow>Delete metrics from died processes...</yellow>\n");
 
-    $Kernel::OM->Get('Kernel::System::Prometheus')->ClearValuesWithDiedPids();
+    $Kernel::OM->Get('Kernel::System::Prometheus')->DeleteDiedPIDs();
 
     $Self->Print("<green>Done.</green>\n");
     return $Self->ExitCodeOk();

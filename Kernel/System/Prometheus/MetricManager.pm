@@ -268,6 +268,14 @@ sub _GetDefaultMetricsConstructors {
             );
         },
 
+        OTRSReallySendedMailTotal => sub {
+            $OTRSMetricGroup->new_counter(
+                name   => 'really_sended_mail_total',
+                help   => 'The number of really sended mail',
+                labels => [qw(host)],
+            );
+        },
+
         OTRSTicketTotal => sub {
             $OTRSMetricGroup->new_gauge(
                 name   => 'ticket_total',

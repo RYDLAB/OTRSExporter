@@ -42,8 +42,6 @@ sub new {
     my $Self = {};
     bless( $Self, $Type );
 
-    $Self->{PrometheusObject} = Net::Prometheus->new( disable_process_collector => 1 );
-
     $Self->{Settings} = $Kernel::OM->Get('Kernel::Config')->Get('Prometheus::Settings');
 
     if (!$Self->{Settings}) {
@@ -55,46 +53,18 @@ sub new {
         return;
     }
 
-    # Get guard type
-    if ($Self->{Settings}{Guard}) {
-        my $GenericModule = 'Kernel::System::Prometheus::Guard::' . ( $Self->{Settings}{Guard} // 'Cache' );
-        return if !$Kernel::OM->Get('Kernel::System::Main')->Require($GenericModule);
+    $Self->{Guard} = $Self->_GetGuard();
 
-        if ( $Self->{Settings}{Guard} eq 'SHM' ) {
-            $Self->{Guard} = $Kernel::OM->Create(
-                $GenericModule,
-                ObjectParams => {
-                    SharedMemoryKey => $Self->{Settings}{SharedMemoryKey},
-                    DestroyFlag     => 0,
-                },
-            );
-        }
-
-        else {
-            $Self->{Guard} = $Kernel::OM->Get($GenericModule);
-        }
-    }
-
-    else {
+    if (!$Self->{Guard}) {
         $Kernel::OM->Get('Kernel::System::Log')->Log(
-            Priority => 'error',
-            Message  => 'Can\'t load prometheus guard setting!',
+            Priority => 'Error',
+            Message  => 'Can\'t create Guard',
         );
 
         return;
     }
 
-
-    if (!$Self->{PrometheusObject}) {
-        $Kernel::OM->Get('Kernel::System::Log')->Log(
-            Priority => 'error',
-            Message  => 'Can\'t create prometheus object!',
-        );
-
-        return;
-    }
-
-    if (!IsHashRefWithData( $Self->{Guard}->Fetch() )) {
+    if (!IsHashRefWithData( $Kernel::OM::Metrics )) {
         $Self->_CreateMetrics();
     }
 
@@ -104,15 +74,28 @@ sub new {
 sub Change {
     my ( $Self, %Param ) = @_;
 
-    $Self->{Guard}->Change( Callback => $Param{Callback} );
+    if ( !$Param{Callback} ) {
+        $Kernel::OM->Get('Kernel::System::Log')->Log(
+            Priority => 'error',
+            Message  => 'Need callback',
+        );
+
+        return;
+    }
+
+    my $Metrics = $Kernel::OM::Metrics;
+
+    $Param{Callback}->($Metrics);
+
+    return 1;
 }
 
 sub Render {
     my $Self = shift;
 
-    $Self->RefreshMetrics();
+    my $Renderer = Net::Prometheus->new(disable_process_collector => 1);
 
-    $Self->_LoadSharedMetrics() || return 'empty result';
+    $Self->RefreshMetrics();
 
     # Get http processes info
     my $MainProcPID = 0;
@@ -161,17 +144,40 @@ sub Render {
         }
 
         for my $ProcessCollector (@ProcessCollectors) {
-            $Self->{PrometheusObject}->register( $ProcessCollector );
+            $Renderer->register( $ProcessCollector );
         }
     }
 
-    # Init process-collector variables to avoid warnings about unitialized variables (e.g. $BOOTTIME)
-    # Especially for daemon processes
-    else {
-        Net::Prometheus::ProcessCollector->new( pid => 1 );
+    my $RenderResult = $Renderer->render();
+
+    my $Renders = $Self->{Guard}->Fetch() // {};
+
+    for my $Key ( sort keys %$Renders ) {
+        $RenderResult .= "\n" . $Renders->{ $Key };
     }
 
-    $Self->{PrometheusObject}->render();
+    return $RenderResult || 'empty result';
+}
+
+sub ShareMetrics {
+    my ( $Self, %Param ) = @_;
+
+    my $Renderer = Net::Prometheus->new(disable_process_collector => 1);
+    my $Metrics  = $Kernel::OM::Metrics;
+    my $SpecifiedMetrics = $Param{Metrics} // [ keys %$Metrics ];
+
+    for my $MetricName ( @$SpecifiedMetrics ) {
+        next if !$Metrics->{ $MetricName };
+        next if !IsArrayRefWithData($Metrics->{ $MetricName }->collect()->samples());
+        $Renderer->register($Metrics->{$MetricName});
+    }
+
+    $Self->{Guard}->Change( Callback => sub {
+        my $RenderResults = shift;
+        $RenderResults->{ $Param{Key} // $$ } = $Renderer->render();
+    });
+
+    return 1;
 }
 
 sub RefreshMetrics {
@@ -194,7 +200,7 @@ sub RefreshMetrics {
     my $Host           = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost();
 
     for my $Summary (@$DaemonSummary) {
-        next if $Summary->{Header} ne 'Recurrent cron tasks:';
+        next if $Summary->{Header} !~ /Cron/i;
         $RecurrentTasks = $Summary->{Data};
         last;
     }
@@ -262,92 +268,6 @@ sub NewProcessCollector {
             );
         }
     );
-
-    return 1;
-}
-
-sub ClearValuesWithDiedPids {
-    my ( $Self, %Param ) = @_;
-
-    my $MetricManager = $Kernel::OM->Get('Kernel::System::Prometheus::MetricManager');
-
-    my %ToDeleteKeys;
-    my $MetricsCopy = $Self->{Guard}->Fetch();
-
-    my $GetWorkerIndex = sub {
-        my $MetricName = shift || return;
-        for my $Index ( 0 .. scalar @{ $MetricsCopy->{$MetricName}{labels} } ) {
-            if ($MetricsCopy->{$MetricName}{labels}[$Index] eq 'worker') {
-                return $Index;
-            }
-        }
-
-        return;
-    };
-
-    my $HaveToDelete;
-
-    for my $MetricName (qw( HTTPRequestsTotal HTTPResponseSizeBytes HTTPRequestDurationSeconds )) {
-        next if !$MetricManager->IsMetricEnabled($MetricName);
-
-        $ToDeleteKeys{$MetricName} = [];
-        my $WorkerIndex = $GetWorkerIndex->($MetricName);
-
-        for my $LabelValueKey (keys %{ $MetricsCopy->{$MetricName}{labelvalues} }) {
-            my $PID = $MetricsCopy->{$MetricName}{labelvalues}{$LabelValueKey}[$WorkerIndex];
-            next if pexists($PID);
-
-            push @{ $ToDeleteKeys{$MetricName} }, $LabelValueKey;
-            $HaveToDelete = 1;
-        }
-    }
-
-    return if !%ToDeleteKeys;
-    return if !$HaveToDelete;
-
-    $Self->Change(
-        Callback => sub {
-            my $Metrics = shift;
-
-            if ( IsArrayRefWithData($ToDeleteKeys{HTTPRequestsTotal}) ) {
-                for my $ToDeleteKey (@{ $ToDeleteKeys{HTTPRequestsTotal} }) {
-                    delete $Metrics->{HTTPRequestsTotal}{labelvalues}{$ToDeleteKey};
-                    delete $Metrics->{HTTPRequestsTotal}{values}{$ToDeleteKey};
-                }
-            }
-
-            for my $HistogramMetric (qw/ HTTPResponseSizeBytes HTTPRequestDurationSeconds /) {
-                next if !IsArrayRefWithData($ToDeleteKeys{$HistogramMetric});
-                for my $ToDeleteKey (@{ $ToDeleteKeys{$HistogramMetric} }) {
-                    delete $Metrics->{$HistogramMetric}{bucketcounts}{$ToDeleteKey};
-                    delete $Metrics->{$HistogramMetric}{labelvalues}{$ToDeleteKey};
-                    delete $Metrics->{$HistogramMetric}{sums}{$ToDeleteKey};
-                }
-            }
-
-            return 1;
-        }
-    );
-
-    return 1;
-}
-
-sub ClearDiedProcessCollectors {
-    my ( $Self, %Param ) = @_;
-
-    my $Metrics = $Self->{Guard}->Fetch();
-
-    my @DiedCollectors;
-    for my $MetricName( keys %{ $Metrics } ) {
-        next if $MetricName !~ m{ProcessCollector\K(\d+)}p;
-        my $PID = $1;
-        next if pexists($PID);
-        push @DiedCollectors, "ProcessCollector$PID";
-    }
-
-    return 1 if !@DiedCollectors;
-
-    $Self->Change( Callback => sub { delete $_[0]->{ $_ } for @DiedCollectors } );
 
     return 1;
 }
@@ -425,6 +345,11 @@ sub UpdateDefaultMetrics {
         }
     );
 
+    $Self->ShareMetrics(
+        Key     => 'DefaultSQL',
+        Metrics => [qw( OTRSArticleTotal OTRSTicketTotal )],
+    );
+
     return 1;
 }
 
@@ -438,6 +363,8 @@ sub UpdateCustomSQLMetrics {
     my $CustomMetricsSQLInfo = $MetricManager->CustomMetricsSQLInfoGet();
 
     return if !$CustomMetricsSQLInfo;
+
+    $Self->MergeCustomMetrics();
 
     my $DBObject = $Kernel::OM->Get('Kernel::System::DB');
 
@@ -473,23 +400,10 @@ sub UpdateCustomSQLMetrics {
         },
     );
 
-    return 1;
-}
-
-sub IsAllCustomMetricsCreated {
-    my ( $Self, %Param ) = @_;
-
-    my $MetricManager = $Kernel::OM->Get('Kernel::System::Prometheus::MetricManager');
-
-    my $CustomMetricNames = $MetricManager->AllCustomMetricsNamesGet();
-
-    my @CreatedMetricNames = keys %{ $Self->{Guard}->Fetch() || {} };
-
-    for my $CustomMetricName ( @$CustomMetricNames ) {
-        if ( !any { $_ eq $CustomMetricName } @CreatedMetricNames ) {
-            return;
-        }
-    }
+    $Self->ShareMetrics(
+        Key     => 'CustomSQLMetrics',
+        Metrics => [keys %SQLQueryResults],
+    );
 
     return 1;
 }
@@ -518,32 +432,30 @@ sub MergeCustomMetrics {
     return 1;
 }
 
+sub DeleteDiedPIDs {
+    my ( $Self, %Param ) = @_;
+
+    $Self->{Guard}->Change( Callback => sub {
+        my $Renders = shift;
+
+        for my $Key ( keys %$Renders ) {
+            # Is key pid?
+            next if $Key !~ /\d+/;
+            delete $Renders->{ $Key } if !pexists($Key);
+        }
+
+        return 1;
+    });
+
+    return 1;
+}
+
 sub ClearMemory {
     my $Self = shift;
 
-    $Self->Change( Callback => sub { $_[0] = {} } );
+    $Self->{Guard}->Change(Callback => sub { $_[0] = {} });
+
     $Self->_CreateMetrics();
-}
-
-sub _LoadSharedMetrics {
-    my $Self = shift;
-
-    my $SharedMetrics = $Self->{Guard}->Fetch();
-
-    if (!$SharedMetrics) {
-        $Kernel::OM->Get('Kernel::System::Log')->Log(
-            Priority => 'error',
-            Message  => 'Prometheus can not load metrics from shared memory. It\'s empty!',
-        );
-
-        return;
-    }
-
-    for my $MetricName ( keys %{$SharedMetrics} ) {
-        $Self->{PrometheusObject}->register($SharedMetrics->{$MetricName});
-    }
-
-    return 1;
 }
 
 sub _CreateMetrics {
@@ -553,16 +465,20 @@ sub _CreateMetrics {
 
     my $Metrics = $MetricManager->CreateDefaultMetrics();
 
-    if ($MetricManager->IsCustomMetricsEnabled()) {
-        my $CustomMetrics = $MetricManager->CreateCustomMetrics();
-        for my $CustomMetricName ( keys %$CustomMetrics ) {
-            $Metrics->{$CustomMetricName} = $CustomMetrics->{$CustomMetricName};
-        }
-    }
-
-    $Self->{Guard}->Store( Data => $Metrics );
+    $Kernel::OM::Metrics = $Metrics;
 
     return 1;
+}
+
+sub _GetGuard {
+    my ( $Self, %Param ) = @_;
+
+    my $GenericModule = 'Kernel::System::Prometheus::Guard::';
+    $GenericModule .= $Kernel::OM->Get('Kernel::Config')->Get('Prometheus::Settings')->{Guard};
+
+    return if !$Kernel::OM->Get('Kernel::System::Main')->Require($GenericModule);
+
+    return $Kernel::OM->Get($GenericModule);
 }
 
 1

@@ -109,11 +109,15 @@ sub Run {
 
     if ($Kernel::OM->Get('Kernel::System::Prometheus::MetricManager')->IsMetricEnabled('DaemonProcessCollector')) {
         my $Host = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost();
-        $Kernel::OM->Get('Kernel::System::Prometheus')->NewProcessCollector(
+        my $PrometheusObject = $Kernel::OM->Get('Kernel::System::Prometheus');
+
+        $PrometheusObject->NewProcessCollector(
             PID    => $$,
             Prefix => 'daemon_process',
             Labels => [ host => $Host, worker => $$, name => 'FutureTaskManager'],
         );
+
+        $PrometheusObject->ShareMetrics();
     }
 
     return 1;

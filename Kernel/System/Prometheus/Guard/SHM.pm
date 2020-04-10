@@ -16,14 +16,6 @@ use parent 'Kernel::System::Prometheus::Guard';
 use IPC::ShareLite qw(:lock);
 use Sereal qw( get_sereal_decoder get_sereal_encoder );
 
-use constant {
-    DEFAULT_SHARED_MEMORY_KEY => 1999,
-    DEFAULT_CREATE_FLAG       => 1,
-    DEFAULT_DESTROY_FLAG      => 0,
-    DEFAULT_ACCESS_MODE       => 0666,
-    DEFAULT_SIZE              => 65536,
-};
-
 our @ObjectDependencies = (
     'Kernel::System::Log',
 );
@@ -34,22 +26,21 @@ sub new {
     my $Self = {};
     bless( $Self, $Type );
 
-    $Self->{DECODER} = get_sereal_decoder();
-    $Self->{ENCODER} = get_sereal_encoder();
+    $Self->{DECODER}         = get_sereal_decoder();
+    $Self->{ENCODER}         = get_sereal_encoder();
+    $Self->{SharedMemoryKey} = $Kernel::OM->Get('Kernel::Config')->Get('Prometheus::Settings')->{SharedMemoryKey};
 
     $Self->{SharedMem} = IPC::ShareLite->new(
-        -key     => $Param{SharedMemoryKey}   // DEFAULT_SHARED_MEMORY_KEY,
-        -create  => $Param{CreateFlag}  // DEFAULT_CREATE_FLAG,
-        -destroy => $Param{DestroyFlag} // DEFAULT_DESTROY_FLAG,
-        -mode    => $Param{Mode}        // DEFAULT_ACCESS_MODE,
-        -size    => $Param{Size}        // DEFAULT_SIZE,
+        -key     => 111 // $Self->{SharedMemoryKey},
+        -create  => 1,
+        -destroy => 0,
     );
 
     for my $Needed ( qw( DECODER ENCODER SharedMem ) ) {
         if (!$Self->{$Needed}) {
             $Kernel::OM->Get('Kernel::System::Log')->Log(
                 Priority => 'error',
-                Message  => "Prometheus::Guard can not to create object $Needed",
+                Message  => "Can't create object $Needed",
             );
 
             return;
@@ -72,17 +63,16 @@ sub Change {
         return;
     }
 
-    return if !$Self->_LockMemory( LockFlag => LOCK_EX|LOCK_NB );
+    return if !$Self->_LockMemory();
 
-    my $Data = $Self->Fetch();
+    my $Data = $Self->Fetch() // {};
 
     if (!$Data) {
         $Kernel::OM->Get('Kernel::System::Log')->Log(
             Priority => 'error',
-            Message  => 'Guard can not change empty data!',
+            Message  => 'Data to change is empty',
         );
 
-        $Self->_UnlockMemory;
         return;
     }
 
@@ -127,7 +117,7 @@ sub Fetch {
 sub _LockMemory {
     my ( $Self, %Param ) = @_;
 
-    $Self->{SharedMem}->lock( $Param{LockFlag} // LOCK_EX );
+    $Self->{SharedMem}->lock( $Param{LockFlag} // LOCK_EX|LOCK_NB );
 }
 
 sub _UnlockMemory {

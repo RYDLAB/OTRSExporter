@@ -570,6 +570,12 @@ sub SaveFormDraft {
     return 1;
 }
 
+sub DESTROY {
+    my ( $Self, %Param ) = @_;
+
+    $Kernel::OM->Get('Kernel::System::Prometheus')->ShareMetrics;
+}
+
 1;
 
 =head1 TERMS AND CONDITIONS
