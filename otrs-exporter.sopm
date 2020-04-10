@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <otrs_package version="1.0">
     <Name>OTRS-Exporter</Name>
-    <Version>0.0.3</Version>
+    <Version>0.0.4</Version>
     <Framework>6.x.x</Framework>
     <Vendor>Rydlab</Vendor>
     <URL>https://rydlab.ru/</URL>
@@ -30,6 +30,9 @@
     <ChangeLog Version="0.0.2" Date="2020-02-20 12:00:00">Modified Net::Prometheus::ProcessCollector::linux to resolve problem with BOOTTIME</ChangeLog>
     <ChangeLog Version="0.0.3" Date="2020-02-25 16:20:00">
         Added option for guard backends. Added cache-backend for guard. Improved process collecting. Russian language support added
+    </ChangeLog>
+    <ChangeLog Version="0.0.4" Date="2020-04-10 18:00:00">
+        Policy for saving metrics changed.
     </ChangeLog>
     <PackageIsVisible>1</PackageIsVisible>
     <PackageIsDownloadable>1</PackageIsDownloadable>
@@ -64,9 +67,7 @@
         <File Permission="644" Location="Kernel/System/Prometheus/Helper.pm"></File>
         <File Permission="644" Location="Kernel/System/Prometheus/MetricManager.pm"></File>
         <File Permission="644" Location="Kernel/System/Console/Command/Maint/Prometheus/ClearMemory.pm"></File>
-        <File Permission="644" Location="Kernel/System/Console/Command/Maint/Prometheus/DeleteDiedProcessCollectors.pm"></File>
-        <File Permission="644" Location="Kernel/System/Console/Command/Maint/Prometheus/DeleteValuesWithDiedPIDs.pm"></File>
-        <File Permission="644" Location="Kernel/System/Console/Command/Maint/Prometheus/MergeCustomMetrics.pm"></File>
+        <File Permission="644" Location="Kernel/System/Console/Command/Maint/Prometheus/DeleteDiedPIDs.pm"></File>
         <File Permission="644" Location="Kernel/System/Prometheus.pm"></File>
         <File Permission="644" Location="Custom/Kernel/GenericInterface/Provider.pm"></File>
         <File Permission="644" Location="Custom/Kernel/System/Cache.pm"></File>
