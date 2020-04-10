@@ -502,12 +502,28 @@ sub Fetch {
         && $Kernel::OM->Get('Kernel::System::Prometheus::MetricManager')->IsMetricEnabled('OTRSIncomeMailTotal')
         )
     {
-        my $Host = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost();
+        my $Host  = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost();
+        my $Total = $FetchCounter + ( $Kernel::OM->Get('Kernel::System::Cache')->Get(
+            Type => 'PrometheusCache',
+            Key  => 'IncomeMailTotal',
+        ) // 0 );
+
         $Kernel::OM->Get('Kernel::System::Prometheus')->Change(
             Callback => sub {
                 my $Metrics = shift;
-                $Metrics->{OTRSIncomeMailTotal}->inc( $Host, $FetchCounter );
+                $Metrics->{OTRSIncomeMailTotal}->inc( $Host, $Total );
             },
+        );
+
+        $Kernel::OM->Get('Kernel::System::Cache')->Set(
+            Type  => 'PrometheusCache',
+            Key   => 'IncomeMailTotal',
+            Value => $Total,
+        );
+
+        $Kernel::OM->Get('Kernel::System::Prometheus')->ShareMetrics(
+            Key     => 'IncomeMailTotal',
+            Metrics => ['OTRSIncomeMailTotal'],
         );
     }
 

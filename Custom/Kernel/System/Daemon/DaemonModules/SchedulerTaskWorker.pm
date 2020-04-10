@@ -134,16 +134,27 @@ sub Run {
 
     if ($Kernel::OM->Get('Kernel::System::Prometheus::MetricManager')->IsMetricEnabled('DaemonProcessCollector')) {
         my $Host = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost();
-        $Kernel::OM->Get('Kernel::System::Prometheus')->NewProcessCollector(
+        my $PrometheusObject = $Kernel::OM->Get('Kernel::System::Prometheus');
+
+        $PrometheusObject->NewProcessCollector(
             PID    => $$,
             Prefix => 'daemon_process',
             Labels => [ host => $Host, worker => $$, name => 'TaskWorker' ],
         );
+        $PrometheusObject->ShareMetrics();
     }
 
     $Self->{CurrentWorkersCount} = scalar keys %{ $Self->{CurrentWorkers} };
 
     my @TaskList = $Self->{SchedulerDBObject}->TaskListUnlocked();
+    
+    if ($Kernel::OM->Get('Kernel::System::Prometheus::MetricManager')->IsMetricEnabled('DaemonSubworkersMetrics')) {
+        $Self->{CacheObject}->Set(
+            Type  => 'DaemonSubworkers',
+            Key   => 'TaskList',
+            Value => \@TaskList,
+        );
+    }
 
     TASK:
     for my $TaskID (@TaskList) {
@@ -192,7 +203,6 @@ sub Run {
 
             # Do error handling.
             if ( !%Task || !$Task{Type} || !$Task{Data} || ref $Task{Data} ne 'HASH' ) {
-
                 $SchedulerDBObject->TaskDelete(
                     TaskID => $TaskID,
                 );
@@ -241,7 +251,7 @@ sub Run {
             }
 
             # detect task execution time
-            $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->StartCountdown;
+            $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->StartCountdown();
 
             $TaskHandlerObject->Run(
                 TaskID   => $TaskID,
@@ -250,26 +260,15 @@ sub Run {
             );
 
             if ( $Kernel::OM->Get('Kernel::System::Prometheus::MetricManager')->IsMetricEnabled('DaemonSubworkersMetrics') ) {
-                my $PrometheusObject = $Kernel::OM->Get('Kernel::System::Prometheus');
-                my $Host = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost;
-                my $ExecutionTime = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetCountdown;
-
-                $PrometheusObject->Change(
-                    Callback => sub {
-                        my $Metrics = shift;
-
-                        $Metrics->{DaemonSubworkersTotal}->inc(
-                            $Host, $Task{Type}, $Task{Name} || 'nameless',
-                        );
-
-                        $Metrics->{DaemonSubworkersLastExecutionTime}->set(
-                            $Host, $Task{Type}, $Task{Name} || 'nameless', $ExecutionTime,
-                        );
-
-                        return 1;
-                    }
+                $Self->{CacheObject}->Set(
+                    Type  => "DaemonSubworkers",
+                    Key   => $TaskID,
+                    Value => {
+                        Name => $Task{Name},
+                        Type => $Task{Type},
+                        Time => $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetCountdown() || -1,
+                    },
                 );
-
             }
 
             # Force transactional events to run by discarding all objects before deleting the task.
@@ -311,6 +310,45 @@ sub PostRun {
 
     # Check pid hash and pid file after sleep time to give the workers time to finish.
     return if !$Self->_WorkerPIDsCheck();
+
+    if ($Kernel::OM->Get('Kernel::System::Prometheus::MetricManager')->IsMetricEnabled('DaemonSubworkersMetrics')) {
+        my $PrometheusObject = $Kernel::OM->Get('Kernel::System::Prometheus');
+        my $Host             = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost();
+        my $TaskList         = $Self->{CacheObject}->Get(
+            Type => 'DaemonSubworkers',
+            Key  => 'TaskList',
+        ) // [];
+
+        for my $TaskID (@$TaskList) {
+            my $Task = $Self->{CacheObject}->Get(
+                Type => 'DaemonSubworkers',
+                Key  => $TaskID,
+            );
+
+            next if !$Task;
+            next if !$Task->{Type};
+            next if !$Task->{Name};
+            next if !$Task->{Time};
+
+            $PrometheusObject->Change(
+                Callback => sub {
+                    my $Metrics = shift;
+
+                    $Metrics->{DaemonSubworkersTotal}->inc(
+                        $Host, $Task->{Type}, $Task->{Name},
+                    );
+
+                    $Metrics->{DaemonSubworkersLastExecutionTime}->set(
+                        $Host, $Task->{Type}, $Task->{Name}, $Task->{Time} // -1,
+                    );
+
+                    return 1;
+                }
+            );
+
+            $PrometheusObject->ShareMetrics();
+        }
+    }
 
     $Self->{DiscardCount}--;
 

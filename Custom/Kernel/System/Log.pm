@@ -191,6 +191,8 @@ sub Log {
 
     if(
         $Subroutine2 !~ m{Prometheus}i # avoid recursive calls to create new Prometheus or OTRS exporter object
+        && $Subroutine2 !~ m{Log}i
+        && $Subroutine2 !~ m{ObjectManager}i
         && $Kernel::OM->Get('Kernel::System::Prometheus::MetricManager')->IsMetricEnabled('OTRSLogsTotal')
     )
     {
@@ -199,6 +201,9 @@ sub Log {
             Callback => sub {
                 $_[0]->{OTRSLogsTotal}->inc( $Host, $Priority, $Self->{LogPrefix}, $Subroutine2 );
             }
+        );
+        $Kernel::OM->Get('Kernel::System::Prometheus')->ShareMetrics(
+            Metrics => ['OTRSLogsTotal'],
         );
     }
 

@@ -686,12 +686,29 @@ sub Send {
 
 
     if ( $Kernel::OM->Get('Kernel::System::Prometheus::MetricManager')->IsMetricEnabled('OTRSOutgoingMailTotal') ) {
-        my $Host = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost();
+        my $Host  = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost();
+
+        my $Total = 1 + ( $Kernel::OM->Get('Kernel::System::Cache')->Get(
+            Type => 'PrometheusCache',
+            Key  => 'OutgoingMailTotal',
+        ) // 0 );
+
         $Kernel::OM->Get('Kernel::System::Prometheus')->Change(
             Callback => sub {
                 my $Metrics = shift;
-                $Metrics->{OTRSOutgoingMailTotal}->inc($Host);
+                $Metrics->{OTRSOutgoingMailTotal}->inc($Host, $Total);
             },
+        );
+
+        $Kernel::OM->Get('Kernel::System::Cache')->Set(
+            Type  => 'PrometheusCache',
+            Key   => 'OutgoingMailTotal',
+            Value => $Total,
+        );
+
+        $Kernel::OM->Get('Kernel::System::Prometheus')->ShareMetrics(
+            Key => 'OutgoingMailTotal',
+            Metrics => ['OTRSOutgoingMailTotal'],
         );
     }
 
@@ -783,6 +800,30 @@ sub SendExecute {
         );
 
         return $Sent;
+    }
+
+    if ($Kernel::OM->Get('Kernel::System::Prometheus::MetricManager')->IsMetricEnabled('OTRSReallySendedMailTotal')) {
+        my $Host  = $Kernel::OM->Get('Kernel::System::Prometheus::Helper')->GetHost();
+        my $Total = 1 + ( $Kernel::OM->Get('Kernel::System::Cache')->Get(
+            Type => 'PrometheusCache',
+            Key  => 'ReallySendedMailTotal',
+        ) // 0 );
+
+        $Kernel::OM->Get('Kernel::System::Prometheus')->Change( Callback => sub {
+            my $Metrics = shift;
+            $Metrics->{OTRSReallySendedMailTotal}->inc( $Host, $Total );
+        });
+
+        $Kernel::OM->Get('Kernel::System::Cache')->Set(
+            Type  => 'PrometheusCache',
+            Key   => 'ReallySendedMailTotal',
+            Value => $Total,
+        );
+
+        $Kernel::OM->Get('Kernel::System::Prometheus')->ShareMetrics(
+            Key     => 'ReallySendedMail',
+            Metrics => ['OTRSReallySendedMailTotal'],
+        );
     }
 
     return {

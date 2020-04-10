@@ -32,10 +32,10 @@ sub new {
     return $Self;
 }
 
-sub Change { die 'Using virtual method!' }
+sub Change { die 'Using virtual method' }
 
-sub Store  { die 'Using virtual method!' }
+sub Store { die 'Using virtual method' }
 
-sub Fetch  { die 'Using virtual method!' }
+sub Fetch { die 'Using virtual method' }
 
 1

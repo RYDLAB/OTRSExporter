@@ -40,18 +40,6 @@
                     </li>
                     <li>
                         <form action="[% Env("CGIHandle") %]" method="post">
-                            <input type="hidden" name="Action" value="[% Env("Action") %]" />
-                            <input type="hidden" name="Subaction" value="DeployMetrics"/>
-
-                            <button class="CallForAction Fullsize Center" type="submit">
-                                <span><i class="fa fa-rocket"></i>
-                                    [% Translate("Deploy metrics") | html %]
-                                </span>
-                            </button>
-                        </form>
-                    </li>
-                    <li>
-                        <form action="[% Env("CGIHandle") %]" method="post">
                             <input type="hidden" name="Action" value="[% Env("Action") %]"/>
                             <input type="hidden" name="Subaction" value="ClearMemory"/>
 

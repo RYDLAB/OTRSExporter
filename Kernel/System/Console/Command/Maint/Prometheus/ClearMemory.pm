@@ -20,7 +20,7 @@ our @ObjectDependencies = (
 sub Configure {
     my ( $Self, %Param ) = @_;
 
-    $Self->Description("Clear the prometheus guard shared memory");
+    $Self->Description("Clear the prometheus guard memory");
 
     return;
 }
@@ -28,7 +28,7 @@ sub Configure {
 sub Run {
     my ( $Self, %Param ) = @_;
 
-    $Self->Print("<yellow>Clearing the prometheus guard shared memory...</yellow>\n");
+    $Self->Print("<yellow>Clearing the prometheus guard memory...</yellow>\n");
 
     $Kernel::OM->Get('Kernel::System::Prometheus')->ClearMemory();
 

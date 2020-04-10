@@ -14,6 +14,7 @@ The following metrics are now available:
 *  otrs
     *  otrs_income_mail_total{host}
     *  otrs_outgoing_mail_total{host}
+    *  otrs_really_sended__mail_total{host}
     *  otrs_ticket_total{host, queue, status}
     *  otrs_article_total{host, queue, status}
     *  otrs_logs_total{host, priority, prefix, module}
@@ -79,7 +80,7 @@ as a rule slower, than Guard::SHM. Guard::SHM using shared memory, so your opera
 Now it's time to create new web service in OTRS for Prometheus monitoring system.
 Go to http://localhost/otrs/index.pl?Action=AdminGenericInterfaceWebservice and add new web service.
 Enter some name('Prometheus' for example), and in block OTRS as provider as network transport choose HTTP::SendText. Save web-service.
-Now add new operation for Prometheus::MetricGet. Insert name, save and finish. 
+Now add new operation for Prometheus::MetricGet. Insert name, save and finish.
 
 Then configure network transport (find button 'configure' near 'HTTP::SendText'): for created operation add route by which prometheus will come.
 Save and finish.
@@ -116,24 +117,17 @@ last column is always value to update metric. All columns before is labels for m
 To change metric you can go to http://localhost/otrs/index.pl?Action=AdminPrometheus and click at name of metric to change.
 You also can delete this metric using actions block and changing-page
 
-### Deploy metrics
-
-After creating new metric you should deploy all new metrics. You can do this using action 'Deploy metric'. If you dont,
-the new metric will not appear at web-service operation page.
-
-### Clear shared memory
+### Clear memory
 
 You can clear shared memory to reset all metrics. Be careful, because metrics about daemon processes will be able to update only after
 otrs.Daemon restart
 
 ## Console commands
 
-There are several new console commands:
+There are two new console commands:
 
-*  `Maint::Prometheus::ClearMemory`                 - Same as clear shared memory at custom-metrics-web-page
-*  `Maint::Prometheus::DeleteDiedProcessCollectors` - Delete collectors for died processes
-*  `Maint::Prometheus::DeleteValuesWithDiedPIDs`    - Delete the metric values with died workers as label
-*  `Maint::Prometheus::MergeCustomMetrics`          - Merge custom metrics to shared memory (same as deploy)
+*  `Maint::Prometheus::ClearMemory`       - Same as clear shared memory at custom-metrics-web-page
+*  `Maint::Prometheus::DeleteDiedPIDs`    - Delete metrics from died processes ( it's also executing with cron task )
 
 
 # Prometheus
